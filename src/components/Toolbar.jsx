@@ -27,7 +27,11 @@ export default function Toolbar({
   textPrimary,
   copyGlyph,
   pasteGlyph,
-  clipboard
+  clipboard,
+  leftGuidePos,
+  setLeftGuidePos,
+  rightGuidePos,
+  setRightGuidePos
 }) {
   if (!showToolbar) return null;
 
@@ -55,6 +59,44 @@ export default function Toolbar({
                 className="w-24 cursor-pointer h-1.5 accent-blue-500"
               />
               <span className={`text-xs font-bold ${textSecondary} w-6`}>{strokeWidth}px</span>
+            </div>
+          </div>
+        </div>
+
+        {/* VERTICAL GUIDES */}
+        <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${sectionBg} border ${borderColor}`}>
+          <div className="flex flex-col gap-1">
+            <label className={`text-xs font-bold uppercase tracking-wider ${textSecondary}`}>Guides</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min="0.05"
+                max="0.45"
+                step="0.05"
+                value={leftGuidePos}
+                onChange={(e) => {
+                  const newVal = parseFloat(e.target.value);
+                  if (newVal < rightGuidePos - 0.1) setLeftGuidePos(newVal);
+                  localStorage.setItem('typeForgeLeftGuidePos', newVal);
+                }}
+                className="w-20 cursor-pointer h-1.5 accent-purple-500"
+                title="Left guide position"
+              />
+              <span className={`text-xs font-bold ${textSecondary} w-12`}>{(leftGuidePos * 100).toFixed(0)}% - {(rightGuidePos * 100).toFixed(0)}%</span>
+              <input
+                type="range"
+                min="0.55"
+                max="0.95"
+                step="0.05"
+                value={rightGuidePos}
+                onChange={(e) => {
+                  const newVal = parseFloat(e.target.value);
+                  if (newVal > leftGuidePos + 0.1) setRightGuidePos(newVal);
+                  localStorage.setItem('typeForgeRightGuidePos', newVal);
+                }}
+                className="w-20 cursor-pointer h-1.5 accent-purple-500"
+                title="Right guide position"
+              />
             </div>
           </div>
         </div>

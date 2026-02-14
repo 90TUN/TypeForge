@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback, memo } from 'react';
 import { Copy, Clipboard, HelpCircle, X, Eye } from 'lucide-react';
 import { CANVAS_SIZE } from '../utils/constants';
 
-export default function Canvas({
+function Canvas({
   svgRef,
   activeChar,
   glyphs,
@@ -30,7 +30,9 @@ export default function Canvas({
   setShowPreviewModal,
   charRotation,
   setCharRotation,
-  currentCharKey
+  currentCharKey,
+  leftGuidePos = 0.2,
+  rightGuidePos = 0.8
 }) {
   const [showGuideHelp, setShowGuideHelp] = useState(false);
   const [activePenId, setActivePenId] = useState(null);
@@ -43,7 +45,7 @@ export default function Canvas({
     : activeChar;
 
   // Helper function to rotate a point around canvas center
-  const rotatePoint = (point, angle) => {
+  const rotatePoint = useCallback((point, angle) => {
     const centerX = CANVAS_SIZE / 2;
     const centerY = CANVAS_SIZE / 2;
     const rad = (angle * Math.PI) / 180;
@@ -57,12 +59,29 @@ export default function Canvas({
       x: x * cos - y * sin + centerX,
       y: x * sin + y * cos + centerY
     };
-  };
+  }, []);
 
   // Get current rotation angle
   const currentRotation = charRotation[currentCharKey] ?? 0;
 
-  // Pointer event handlers with palm rejection and pressure sensitivity
+  // Memoize rotated strokes to avoid recalculating on every render
+  const rotatedStrokes = useMemo(() => {
+    return (glyphs[storageKey] || []).map(stroke => {
+      const points = stroke.points || [];
+      if (currentRotation !== 0) {
+        return {
+          ...stroke,
+          rotatedPoints: points.map(p => rotatePoint(p, currentRotation)),
+          rotatedFirstPoint: points[0] ? rotatePoint(points[0], currentRotation) : { x: 0, y: 0 }
+        };
+      }
+      return {
+        ...stroke,
+        rotatedPoints: points,
+        rotatedFirstPoint: points[0] || { x: 0, y: 0 }
+      };
+    });
+  }, [glyphs, storageKey, currentRotation, rotatePoint]);
   const handlePointerDown = (e) => {
     // Pen and mouse events (primary pointers)
     if (e.isPrimary) {
@@ -281,8 +300,7 @@ export default function Canvas({
                 stroke={darkMode ? '#ef4444' : '#dc2626'}
                 strokeWidth="1"
                 strokeDasharray="5,5"
-                opacity="0.7"
-                className="animate-pulse"
+                opacity="0.5"
               />
               
               {/* X-height - 35% */}
@@ -294,8 +312,7 @@ export default function Canvas({
                 stroke={darkMode ? '#f59e0b' : '#d97706'}
                 strokeWidth="1"
                 strokeDasharray="3,3"
-                opacity="0.6"
-                className="animate-pulse"
+                opacity="0.4"
               />
               
               {/* Cap-height & Ascender - 10% (same line for both) */}
@@ -307,35 +324,64 @@ export default function Canvas({
                 stroke={darkMode ? '#60a5fa' : '#2563eb'}
                 strokeWidth="1"
                 strokeDasharray="3,3"
-                opacity="0.6"
-                className="animate-pulse"
+                opacity="0.4"
+              />
+
+              {/* Vertical guides for letter width */}
+              {/* Left margin */}
+              <line
+                x1={CANVAS_SIZE * leftGuidePos}
+                y1="0"
+                x2={CANVAS_SIZE * leftGuidePos}
+                y2={CANVAS_SIZE}
+                stroke={darkMode ? '#8b5cf6' : '#7c3aed'}
+                strokeWidth="1"
+                strokeDasharray="4,4"
+                opacity="0.3"
+              />
+              
+              {/* Center line - 50% */}
+              <line
+                x1={CANVAS_SIZE * 0.5}
+                y1="0"
+                x2={CANVAS_SIZE * 0.5}
+                y2={CANVAS_SIZE}
+                stroke={darkMode ? '#ec4899' : '#db2777'}
+                strokeWidth="1"
+                strokeDasharray="2,2"
+                opacity="0.3"
+              />
+              
+              {/* Right margin */}
+              <line
+                x1={CANVAS_SIZE * rightGuidePos}
+                y1="0"
+                x2={CANVAS_SIZE * rightGuidePos}
+                y2={CANVAS_SIZE}
+                stroke={darkMode ? '#8b5cf6' : '#7c3aed'}
+                strokeWidth="1"
+                strokeDasharray="4,4"
+                opacity="0.3"
               />
             </>
           )}
 
           {/* Draw existing strokes */}
-          {(glyphs[storageKey] || []).map((stroke, i) => {
-            const rotatedPoints = currentRotation !== 0 
-              ? stroke.points.map(p => rotatePoint(p, currentRotation))
-              : stroke.points;
-            const rotatedFirstPoint = currentRotation !== 0 
-              ? rotatePoint(stroke.points[0], currentRotation)
-              : stroke.points[0];
-            
+          {rotatedStrokes.map((stroke, i) => {
             // Check if stroke has pressure data
-            const hasPressure = stroke.hasPresssure || stroke.points.some(p => p.pressure && p.pressure !== 0.5);
+            const hasPressure = stroke.hasPresssure || (stroke.points && stroke.points.some(p => p.pressure && p.pressure !== 0.5));
             
             return (
             <g key={i} style={{ cursor: 'pointer' }} onClick={() => deleteStroke(storageKey, i)} title={`Click to delete stroke ${i + 1}`}>
               {hasPressure ? (
                 // Render with pressure-aware circles
                 <>
-                  {rotatedPoints.map((point, idx) => (
+                  {stroke.rotatedPoints.map((point, idx) => (
                     <circle
                       key={idx}
                       cx={point.x}
                       cy={point.y}
-                      r={Math.max((strokeWidth / 2) * (point.pressure ?? 0.5), 1)}
+                      r={Math.max((strokeWidth / 2) * (stroke.points[idx].pressure ?? 0.5), 1)}
                       fill={darkMode ? 'white' : 'black'}
                       opacity="0.8"
                     />
@@ -344,7 +390,7 @@ export default function Canvas({
               ) : (
                 // Standard polyline for non-pressure strokes
                 <polyline
-                  points={rotatedPoints.map(p => `${p.x},${p.y}`).join(' ')}
+                  points={stroke.rotatedPoints.map(p => `${p.x},${p.y}`).join(' ')}
                   fill="none"
                   stroke={darkMode ? 'white' : 'black'}
                   strokeWidth={strokeWidth}
@@ -354,8 +400,8 @@ export default function Canvas({
                 />
               )}
               <circle
-                cx={rotatedFirstPoint?.x}
-                cy={rotatedFirstPoint?.y}
+                cx={stroke.rotatedFirstPoint?.x}
+                cy={stroke.rotatedFirstPoint?.y}
                 r="6"
                 fill={darkMode ? '#ef4444' : '#dc2626'}
                 opacity="0"
@@ -397,3 +443,5 @@ export default function Canvas({
     </section>
   );
 }
+
+export default memo(Canvas);

@@ -1,4 +1,4 @@
-import React, { useState, memo, useRef } from 'react';
+import React, { useState, memo } from 'react';
 import { X } from 'lucide-react';
 
 const PreviewSection = memo(({ title, previewText, fontUrl, drawnCharCount, isCapsLock, darkMode, bgSecondary, borderColor, textPrimary, textSecondary }) => {
@@ -61,6 +61,34 @@ function PreviewModal({
     const saved = localStorage.getItem('typeForgePreviewText2');
     return saved || 'Quick brown fox';
   });
+  const [preview2FontSize, setPreview2FontSize] = useState(() => {
+    const saved = localStorage.getItem('typeForgePreview2FontSize');
+    return saved ? parseInt(saved) : 24;
+  });
+  const [preview2LineHeight, setPreview2LineHeight] = useState(() => {
+    const saved = localStorage.getItem('typeForgePreview2LineHeight');
+    return saved ? parseFloat(saved) : 1.4;
+  });
+  const [preview2LetterSpacing, setPreview2LetterSpacing] = useState(() => {
+    const saved = localStorage.getItem('typeForgePreview2LetterSpacing');
+    return saved ? parseFloat(saved) : 0;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('typeForgePreviewText2', previewText2);
+  }, [previewText2]);
+
+  React.useEffect(() => {
+    localStorage.setItem('typeForgePreview2FontSize', preview2FontSize);
+  }, [preview2FontSize]);
+
+  React.useEffect(() => {
+    localStorage.setItem('typeForgePreview2LineHeight', preview2LineHeight);
+  }, [preview2LineHeight]);
+
+  React.useEffect(() => {
+    localStorage.setItem('typeForgePreview2LetterSpacing', preview2LetterSpacing);
+  }, [preview2LetterSpacing]);
 
   const drawnCharCount = Object.values(glyphs).filter(strokes => strokes && strokes.length > 0).length;
 
@@ -135,14 +163,71 @@ function PreviewModal({
               maxLength="100"
               className={`w-full h-16 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-2 ${textPrimary} text-sm outline-none border ${borderColor} focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none`}
             />
+
+            {/* Controls */}
+            <div className="space-y-2 text-xs">
+              {/* Font Size */}
+              <div className="flex items-center gap-2">
+                <label className={`w-24 ${textSecondary}`}>Font Size:</label>
+                <input
+                  type="range"
+                  min="12"
+                  max="72"
+                  value={preview2FontSize}
+                  onChange={(e) => setPreview2FontSize(parseInt(e.target.value))}
+                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{
+                    background: darkMode ? '#374151' : '#e5e7eb',
+                  }}
+                />
+                <span className={`w-12 text-right ${textPrimary}`}>{preview2FontSize}px</span>
+              </div>
+
+              {/* Line Height */}
+              <div className="flex items-center gap-2">
+                <label className={`w-24 ${textSecondary}`}>Line Height:</label>
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.1"
+                  value={preview2LineHeight}
+                  onChange={(e) => setPreview2LineHeight(parseFloat(e.target.value))}
+                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{
+                    background: darkMode ? '#374151' : '#e5e7eb',
+                  }}
+                />
+                <span className={`w-12 text-right ${textPrimary}`}>{preview2LineHeight.toFixed(1)}</span>
+              </div>
+
+              {/* Letter Spacing */}
+              <div className="flex items-center gap-2">
+                <label className={`w-24 ${textSecondary}`}>Letter Spacing:</label>
+                <input
+                  type="range"
+                  min="-0.1"
+                  max="0.2"
+                  step="0.01"
+                  value={preview2LetterSpacing}
+                  onChange={(e) => setPreview2LetterSpacing(parseFloat(e.target.value))}
+                  className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{
+                    background: darkMode ? '#374151' : '#e5e7eb',
+                  }}
+                />
+                <span className={`w-12 text-right ${textPrimary}`}>{(preview2LetterSpacing * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+
             {fontUrl && drawnCharCount > 0 ? (
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3 border ${borderColor}`}>
                 <div
                   style={{
-                    fontSize: '24px',
+                    fontSize: `${preview2FontSize}px`,
                     fontFamily: `'${fontUrl.name}', monospace`,
-                    lineHeight: '1.4',
-                    letterSpacing: '0.05em'
+                    lineHeight: preview2LineHeight,
+                    letterSpacing: `${preview2LetterSpacing}em`
                   }}
                   className={`${textPrimary} break-words`}
                 >

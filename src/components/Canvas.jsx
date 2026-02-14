@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Copy, Clipboard, HelpCircle, X, Eye } from 'lucide-react';
 import { CANVAS_SIZE } from '../utils/constants';
 
@@ -33,6 +33,10 @@ export default function Canvas({
   currentCharKey
 }) {
   const [showGuideHelp, setShowGuideHelp] = useState(false);
+  const [activePenId, setActivePenId] = useState(null);
+  const pointerIdRef = useRef(new Set());
+  const pointerDownTimeRef = useRef(0);
+  const rafIdRef = useRef(null);
   const isLetter = /^[A-Za-z]$/.test(activeChar);
   const displayChar = isLetter && !isUpperCase ? activeChar.toLowerCase() : activeChar;
   const storageKey = isLetter
@@ -59,20 +63,72 @@ export default function Canvas({
   // Get current rotation angle
   const currentRotation = charRotation[currentCharKey] ?? 0;
 
+  // Pointer event handlers with palm rejection and pressure sensitivity
+  const handlePointerDown = (e) => {
+    // Pen and mouse events (primary pointers)
+    if (e.isPrimary) {
+      if (e.pointerType === 'pen') {
+        setActivePenId(e.pointerId);
+      }
+      const eventData = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        pressure: e.pressure || 0.5,
+        pointerType: e.pointerType,
+        preventDefault: () => e.preventDefault()
+      };
+      handleMouseDown(eventData);
+    }
+    // Ignore non-primary touch points (multi-touch)
+    pointerIdRef.current.add(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    // Only process primary pointer or pen
+    if (e.isPrimary || (activePenId && e.pointerId === activePenId)) {
+      // Throttle move events using requestAnimationFrame
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = requestAnimationFrame(() => {
+        const eventData = {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          pressure: e.pressure || 0.5,
+          pointerType: e.pointerType,
+          preventDefault: () => e.preventDefault()
+        };
+        handleMouseMove(eventData);
+      });
+    }
+  };
+
+  const handlePointerUp = (e) => {
+    if (e.isPrimary || (activePenId && e.pointerId === activePenId)) {
+      handleMouseUp({});
+      if (e.pointerId === activePenId) {
+        setActivePenId(null);
+      }
+    }
+    pointerIdRef.current.delete(e.pointerId);
+  };
+
+  const handlePointerCancel = (e) => {
+    if (e.pointerId === activePenId) {
+      setActivePenId(null);
+    }
+    pointerIdRef.current.delete(e.pointerId);
+  };
+
   // Touch event handlers - coordinates are scaled in App.jsx getMousePos
   const handleTouchStart = (e) => {
     const touch = e.touches[0];
-    handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => {} });
+    handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY, pressure: 0.5, preventDefault: () => {} });
   };
 
   const handleTouchMove = (e) => {
     const touch = e.touches[0];
-    handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => {} });
+    handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY, pressure: 0.5, preventDefault: () => {} });
   };
 
-  const handleTouchEnd = (e) => {
-    handleMouseUp({});
-  };
   return (
     <section className={`flex flex-col items-center justify-center p-2 sm:p-4 ${bgPrimary} relative overflow-hidden`}>
       <div className="mb-2 shrink-0 flex items-center gap-3 flex-wrap relative">
@@ -194,9 +250,13 @@ export default function Canvas({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          onTouchEnd={handleMouseUp}
           className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg shadow-lg cursor-crosshair touch-none border-2 ${darkMode ? 'border-gray-700' : 'border-gray-300'} transition-colors max-w-full max-h-full`}
           style={{ aspectRatio: '1 / 1' }}
         >
@@ -263,18 +323,37 @@ export default function Canvas({
               ? rotatePoint(stroke.points[0], currentRotation)
               : stroke.points[0];
             
+            // Check if stroke has pressure data
+            const hasPressure = stroke.hasPresssure || stroke.points.some(p => p.pressure && p.pressure !== 0.5);
+            
             return (
             <g key={i} style={{ cursor: 'pointer' }} onClick={() => deleteStroke(storageKey, i)} title={`Click to delete stroke ${i + 1}`}>
-              <polyline
-                points={rotatedPoints.map(p => `${p.x},${p.y}`).join(' ')}
-                fill="none"
-                stroke={darkMode ? 'white' : 'black'}
-                strokeWidth={strokeWidth}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ opacity: 0.8 }}
-                className="animate-strokeDraw"
-              />
+              {hasPressure ? (
+                // Render with pressure-aware circles
+                <>
+                  {rotatedPoints.map((point, idx) => (
+                    <circle
+                      key={idx}
+                      cx={point.x}
+                      cy={point.y}
+                      r={Math.max((strokeWidth / 2) * (point.pressure ?? 0.5), 1)}
+                      fill={darkMode ? 'white' : 'black'}
+                      opacity="0.8"
+                    />
+                  ))}
+                </>
+              ) : (
+                // Standard polyline for non-pressure strokes
+                <polyline
+                  points={rotatedPoints.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill="none"
+                  stroke={darkMode ? 'white' : 'black'}
+                  strokeWidth={strokeWidth}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ opacity: 0.8 }}
+                />
+              )}
               <circle
                 cx={rotatedFirstPoint?.x}
                 cy={rotatedFirstPoint?.y}
@@ -287,15 +366,21 @@ export default function Canvas({
             );
           })}
 
-          {/* Current stroke being drawn */}
-          <polyline
-            points={currentStroke.map(p => `${p.x},${p.y}`).join(' ')}
-            fill="none"
-            stroke="#3b82f6"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          {/* Current stroke being drawn - render with pressure-aware circles */}
+          {currentStroke.map((point, idx) => {
+            const pressure = point.pressure ?? 0.5;
+            const radiusBase = (strokeWidth / 2) * pressure; // Radius scales with pressure
+            return (
+              <circle
+                key={idx}
+                cx={point.x}
+                cy={point.y}
+                r={Math.max(radiusBase, 1)}
+                fill="#3b82f6"
+                opacity="0.7"
+              />
+            );
+          })}
         </svg>
       </div>
 

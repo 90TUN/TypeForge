@@ -1,7 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useEffect, useRef } from 'react';
 import { PREVIEW_SIZES } from '../utils/constants';
 
-export default function RightSidebar({
+const PreviewSection = memo(({ title, previewText, fontUrl, previewSizes, drawnCharCount, isCapsLock, darkMode, bgSecondary, borderColor, textPrimary, textSecondary }) => {
+  const getDisplayText = (text) => {
+    if (!text) return '';
+    return isCapsLock ? text.toUpperCase() : text.toLowerCase();
+  };
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      <h3 className={`text-xs font-bold uppercase ${textSecondary} mb-1.5 shrink-0`}>{title}</h3>
+      
+      {fontUrl && drawnCharCount > 0 ? (
+        <div className={`flex-1 overflow-y-auto p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${borderColor} hide-scrollbar`}>
+          <div className="space-y-1.5">
+            {previewSizes.slice(0, 3).map(size => (
+              <div
+                key={size}
+                style={{
+                  fontSize: `${size}px`,
+                  fontFamily: `'${fontUrl.name}', monospace`,
+                  lineHeight: '1.4',
+                  letterSpacing: '0.05em'
+                }}
+                className={`${textPrimary} break-words`}
+              >
+                {getDisplayText(previewText) || 'Type text...'}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className={`flex-1 overflow-y-auto p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${borderColor} flex items-center justify-center hide-scrollbar`}>
+          <p className={`text-xs text-center ${textSecondary}`}>
+            Draw characters to preview
+          </p>
+        </div>
+      )}
+    </div>
+  );
+})
+
+PreviewSection.displayName = 'PreviewSection';
+
+function RightSidebar({
   previewText,
   setPreviewText,
   fontUrl,
@@ -21,12 +63,25 @@ export default function RightSidebar({
     const saved = localStorage.getItem('typeForgePreviewText2');
     return saved || 'Quick brown fox';
   });
+  const [debouncedPreviewText, setDebouncedPreviewText] = useState(previewText);
+  const debounceTimerRef = useRef(null);
   const drawnCharCount = Object.values(glyphs).filter(strokes => strokes && strokes.length > 0).length;
 
   // Save second preview text
   React.useEffect(() => {
     localStorage.setItem('typeForgePreviewText2', previewText2);
   }, [previewText2]);
+
+  // Debounce preview text input (500ms delay)
+  useEffect(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedPreviewText(previewText);
+    }, 500);
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [previewText]);
 
   // Handle caps lock detection
   const handleKeyDown = (e) => {
@@ -66,32 +121,19 @@ export default function RightSidebar({
         />
 
         {/* Preview */}
-        {fontUrl && drawnCharCount > 0 ? (
-          <div className={`flex-1 overflow-y-auto p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${borderColor} hide-scrollbar`}>
-            <div className="space-y-1.5">
-              {previewSizes.slice(0, 3).map(size => (
-                <div
-                  key={size}
-                  style={{
-                    fontSize: `${size}px`,
-                    fontFamily: `'${fontUrl.name}', monospace`,
-                    lineHeight: '1.4',
-                    letterSpacing: '0.05em'
-                  }}
-                  className={`${textPrimary} break-words`}
-                >
-                  {getDisplayText(previewText) || 'Type text...'} 
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className={`flex-1 overflow-y-auto p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${borderColor} flex items-center justify-center hide-scrollbar`}>
-            <p className={`text-xs text-center ${textSecondary}`}>
-              Draw characters to preview
-            </p>
-          </div>
-        )}
+        <PreviewSection
+          title=""
+          previewText={debouncedPreviewText}
+          fontUrl={fontUrl}
+          previewSizes={PREVIEW_SIZES}
+          drawnCharCount={drawnCharCount}
+          isCapsLock={isCapsLock}
+          darkMode={darkMode}
+          bgSecondary={bgSecondary}
+          borderColor={borderColor}
+          textPrimary={textPrimary}
+          textSecondary={textSecondary}
+        />
       </div>
 
       {/* PREVIEW 2 */}
@@ -114,21 +156,16 @@ export default function RightSidebar({
         {/* Preview */}
         {fontUrl && drawnCharCount > 0 ? (
           <div className={`flex-1 overflow-y-auto p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${borderColor} hide-scrollbar`}>
-            <div className="space-y-1.5">
-              {previewSizes.slice(0, 3).map(size => (
-                <div
-                  key={size}
-                  style={{
-                    fontSize: `${size}px`,
-                    fontFamily: `'${fontUrl.name}', monospace`,
-                    lineHeight: '1.4',
-                    letterSpacing: '0.05em'
-                  }}
-                  className={`${textPrimary} break-words`}
-                >
-                  {getDisplayText(previewText2) || 'Type text...'} 
-                </div>
-              ))}
+            <div
+              style={{
+                fontSize: '24px',
+                fontFamily: `'${fontUrl.name}', monospace`,
+                lineHeight: '1.4',
+                letterSpacing: '0.05em'
+              }}
+              className={`${textPrimary} break-words`}
+            >
+              {getDisplayText(previewText2) || 'Type text...'}
             </div>
           </div>
         ) : (
@@ -160,3 +197,5 @@ export default function RightSidebar({
     </section>
   );
 }
+
+export default RightSidebar;

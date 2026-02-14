@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { PenTool, Download, Settings, Menu, X } from 'lucide-react';
 
-export default function Header({
+function Header({
   darkMode,
   showToolbar,
   setShowToolbar,
@@ -55,3 +55,5 @@ export default function Header({
     </header>
   );
 }
+
+export default memo(Header);

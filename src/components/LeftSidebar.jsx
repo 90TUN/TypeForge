@@ -1,8 +1,32 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { ALPHABET, CHARACTER_GROUPS } from '../utils/constants';
 
-export default function LeftSidebar({
+const CharButton = memo(({ group, idx, isPrimary, hasGlyph, activeChar, setActiveChar, displayText, darkMode, textPrimary, textSecondary }) => {
+  return (
+    <button
+      onClick={() => setActiveChar(group[0])}
+      className={`lg:aspect-square py-1.5 lg:py-0 px-1 lg:px-0 rounded-md border text-[10px] lg:text-xs flex items-center justify-center font-bold transition-all relative
+        ${isPrimary 
+          ? `border-blue-500 ${darkMode ? 'bg-blue-900/20' : 'bg-blue-100/50'} ${textPrimary}` 
+          : `${darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'} ${textSecondary}`}
+      `}
+      title={`Character ${displayText}`}
+    >
+      {displayText}
+      {hasGlyph && (
+        <div className="absolute top-0.5 right-0.5">
+          <CheckCircle2 size={6} className="text-green-500 hidden lg:block" />
+          <CheckCircle2 size={5} className="text-green-500 lg:hidden" />
+        </div>
+      )}
+    </button>
+  );
+});
+
+CharButton.displayName = 'CharButton';
+
+function LeftSidebar({
   activeChar,
   setActiveChar,
   glyphs,
@@ -30,27 +54,24 @@ export default function LeftSidebar({
           const displayText = group.length === 2 ? `${group[0]}${group[1]}` : group[0];
           
           return (
-            <button
+            <CharButton
               key={idx}
-              onClick={() => setActiveChar(group[0])}
-              className={`lg:aspect-square py-1.5 lg:py-0 px-1 lg:px-0 rounded-md border text-[10px] lg:text-xs flex items-center justify-center font-bold transition-all relative
-                ${isPrimary 
-                  ? `border-blue-500 ${darkMode ? 'bg-blue-900/20' : 'bg-blue-100/50'} ${textPrimary}` 
-                  : `${darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-100'} ${textSecondary}`}
-              `}
-              title={`Character ${displayText}`}
-            >
-              {displayText}
-              {hasGlyph && (
-                <div className="absolute top-0.5 right-0.5">
-                  <CheckCircle2 size={6} className="text-green-500 hidden lg:block" />
-                  <CheckCircle2 size={5} className="text-green-500 lg:hidden" />
-                </div>
-              )}
-            </button>
+              group={group}
+              idx={idx}
+              isPrimary={isPrimary}
+              hasGlyph={hasGlyph}
+              activeChar={activeChar}
+              setActiveChar={setActiveChar}
+              displayText={displayText}
+              darkMode={darkMode}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
+            />
           );
         })}
       </div>
     </section>
   );
 }
+
+export default memo(LeftSidebar);

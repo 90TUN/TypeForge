@@ -1,8 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { PREVIEW_SIZES } from '../utils/constants';
 
-export default function PreviewModal({
+const PreviewSection = memo(({ title, previewText, fontUrl, drawnCharCount, isCapsLock, darkMode, bgSecondary, borderColor, textPrimary, textSecondary }) => {
+  const getDisplayText = (text) => {
+    if (!text) return '';
+    return isCapsLock ? text.toUpperCase() : text.toLowerCase();
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className={`text-sm font-semibold ${textSecondary}`}>{title}</h3>
+      {fontUrl && drawnCharCount > 0 ? (
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3 border ${borderColor}`}>
+          <div className="space-y-2">
+            {[12, 18, 24].map(size => (
+              <div
+                key={size}
+                style={{
+                  fontSize: `${size}px`,
+                  fontFamily: `'${fontUrl.name}', monospace`,
+                  lineHeight: '1.4',
+                  letterSpacing: '0.05em'
+                }}
+                className={`${textPrimary} break-words`}
+              >
+                {getDisplayText(previewText) || 'Type text...'}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4 border ${borderColor} flex items-center justify-center h-20`}>
+          <p className={`text-sm text-center ${textSecondary}`}>
+            Draw characters to preview
+          </p>
+        </div>
+      )}
+    </div>
+  );
+})
+
+PreviewSection.displayName = 'PreviewSection';
+
+function PreviewModal({
   isOpen,
   onClose,
   previewText,
@@ -21,6 +62,8 @@ export default function PreviewModal({
     const saved = localStorage.getItem('typeForgePreviewText2');
     return saved || 'Quick brown fox';
   });
+  const [debouncedPreviewText, setDebouncedPreviewText] = useState(previewText);
+  const debounceTimerRef = useRef(null);
 
   const drawnCharCount = Object.values(glyphs).filter(strokes => strokes && strokes.length > 0).length;
 
@@ -69,32 +112,18 @@ export default function PreviewModal({
               maxLength="100"
               className={`w-full h-16 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-2 ${textPrimary} text-sm outline-none border ${borderColor} focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none`}
             />
-            {fontUrl && drawnCharCount > 0 ? (
-              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3 border ${borderColor}`}>
-                <div className="space-y-2">
-                  {PREVIEW_SIZES.slice(0, 3).map(size => (
-                    <div
-                      key={size}
-                      style={{
-                        fontSize: `${size}px`,
-                        fontFamily: `'${fontUrl.name}', monospace`,
-                        lineHeight: '1.4',
-                        letterSpacing: '0.05em'
-                      }}
-                      className={`${textPrimary} break-words`}
-                    >
-                      {getDisplayText(previewText) || 'Type text...'}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4 border ${borderColor} flex items-center justify-center h-20`}>
-                <p className={`text-sm text-center ${textSecondary}`}>
-                  Draw characters to preview
-                </p>
-              </div>
-            )}
+            <PreviewSection
+              title=""
+              previewText={debouncedPreviewText}
+              fontUrl={fontUrl}
+              drawnCharCount={drawnCharCount}
+              isCapsLock={isCapsLock}
+              darkMode={darkMode}
+              bgSecondary={bgSecondary}
+              borderColor={borderColor}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
+            />
           </div>
 
           {/* Preview 2 */}
@@ -111,21 +140,16 @@ export default function PreviewModal({
             />
             {fontUrl && drawnCharCount > 0 ? (
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3 border ${borderColor}`}>
-                <div className="space-y-2">
-                  {PREVIEW_SIZES.slice(0, 3).map(size => (
-                    <div
-                      key={size}
-                      style={{
-                        fontSize: `${size}px`,
-                        fontFamily: `'${fontUrl.name}', monospace`,
-                        lineHeight: '1.4',
-                        letterSpacing: '0.05em'
-                      }}
-                      className={`${textPrimary} break-words`}
-                    >
-                      {getDisplayText(previewText2) || 'Type text...'}
-                    </div>
-                  ))}
+                <div
+                  style={{
+                    fontSize: '24px',
+                    fontFamily: `'${fontUrl.name}', monospace`,
+                    lineHeight: '1.4',
+                    letterSpacing: '0.05em'
+                  }}
+                  className={`${textPrimary} break-words`}
+                >
+                  {getDisplayText(previewText2) || 'Type text...'}
                 </div>
               </div>
             ) : (
@@ -153,3 +177,5 @@ export default function PreviewModal({
     </div>
   );
 }
+
+export default memo(PreviewModal);

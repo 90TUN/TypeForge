@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Header from './components/Header';
 import Toolbar from './components/Toolbar';
 import Canvas from './components/Canvas';
@@ -89,11 +89,20 @@ function App() {
   
   const svgRef = useRef(null);
 
-  // Get history for current character (will be updated after callbacks are defined)
-  // Placeholder - will be computed after getCurrentCharKey is defined
-  let currentCharKey = '';
-  let currentHistory = [{}];
-  let currentHistoryIndex = 0;
+  // Memoize expensive computed values
+  const currentCharKey = useMemo(() => {
+    return /^[A-Za-z]$/.test(activeChar)
+      ? (isUpperCase ? activeChar.toUpperCase() : activeChar.toLowerCase())
+      : activeChar;
+  }, [activeChar, isUpperCase]);
+
+  const currentHistory = useMemo(() => {
+    return charHistory[currentCharKey] || [{}];
+  }, [charHistory, currentCharKey]);
+
+  const currentHistoryIndex = useMemo(() => {
+    return charHistoryIndex[currentCharKey] ?? 0;
+  }, [charHistoryIndex, currentCharKey]);
 
   // --- THEME SYSTEM ---
   const darkMode = currentTheme === 'dark' || currentTheme === 'nord' || currentTheme === 'dracula' || currentTheme === 'gruvbox';
@@ -326,11 +335,6 @@ function App() {
       : activeChar;
   }, [activeChar, isUpperCase]);
 
-  // Compute current character history values
-  currentCharKey = getCurrentCharKey();
-  currentHistory = charHistory[currentCharKey] || [{}];
-  currentHistoryIndex = charHistoryIndex[currentCharKey] ?? 0;
-
   // --- HISTORY (Per-Character) ---
   const updateHistory = useCallback((charKey, newCharGlyphs) => {
     setCharHistory(prev => {
@@ -383,8 +387,7 @@ function App() {
     setGlyphs(newGlyphs);
     updateHistory(finalKey, []);
     setCharRotation(prev => ({ ...prev, [finalKey]: 0 }));
-    addToast(`Cleared character '${finalKey}'`, 'success');
-  }, [glyphs, getCurrentCharKey, updateHistory, addToast]);
+  }, [glyphs, getCurrentCharKey, updateHistory]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -424,7 +427,7 @@ function App() {
 
   // --- MOUSE EVENTS ---
   const getMousePos = (e) => {
-    if (!svgRef.current) return { x: 0, y: 0 };
+    if (!svgRef.current) return { x: 0, y: 0, pressure: 0.5 };
     
     // Use SVG's built-in coordinate transformation for perfect accuracy
     const point = svgRef.current.createSVGPoint();
@@ -432,10 +435,14 @@ function App() {
     point.y = e.clientY;
     
     const screenCTM = svgRef.current.getScreenCTM();
-    if (!screenCTM) return { x: 0, y: 0 };
+    if (!screenCTM) return { x: 0, y: 0, pressure: 0.5 };
     
     const svgCoords = point.matrixTransform(screenCTM.inverse());
-    return { x: svgCoords.x, y: svgCoords.y };
+    return { 
+      x: svgCoords.x, 
+      y: svgCoords.y,
+      pressure: e.pressure ?? 0.5
+    };
   };
 
   const handleMouseDown = (e) => {
@@ -460,7 +467,8 @@ function App() {
 
     const finalKey = getCurrentCharKey();
     
-    const updated = { ...glyphs, [finalKey]: [...(glyphs[finalKey] || []), { points: stroke }] };
+    // Store stroke with pressure data
+    const updated = { ...glyphs, [finalKey]: [...(glyphs[finalKey] || []), { points: stroke, hasPresssure: currentStroke.some(p => p.pressure && p.pressure !== 0.5) }] };
     setGlyphs(updated);
     updateHistory(finalKey, updated[finalKey]);
     setCurrentStroke([]);

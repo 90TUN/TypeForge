@@ -1,11 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
-export default function Toast({ id, message, type = 'success', onClose, duration = 3000 }) {
+export default function Toast({ id, message, type = 'success', onClose, duration = 5000 }) {
+  const onCloseRef = useRef(onClose);
+  
+  // Update ref when onClose changes
   useEffect(() => {
-    const timer = setTimeout(onClose, duration);
+    onCloseRef.current = onClose;
+  }, [onClose]);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onCloseRef.current();
+    }, duration);
     return () => clearTimeout(timer);
-  }, [duration, onClose]);
+  }, [duration]);
 
   const bgColor = {
     success: 'bg-green-600',

@@ -1,6 +1,5 @@
-import React, { useState, memo, useEffect, useRef } from 'react';
+import React, { useState, memo, useRef } from 'react';
 import { X } from 'lucide-react';
-import { PREVIEW_SIZES } from '../utils/constants';
 
 const PreviewSection = memo(({ title, previewText, fontUrl, drawnCharCount, isCapsLock, darkMode, bgSecondary, borderColor, textPrimary, textSecondary }) => {
   const getDisplayText = (text) => {
@@ -62,8 +61,6 @@ function PreviewModal({
     const saved = localStorage.getItem('typeForgePreviewText2');
     return saved || 'Quick brown fox';
   });
-  const [debouncedPreviewText, setDebouncedPreviewText] = useState(previewText);
-  const debounceTimerRef = useRef(null);
 
   const drawnCharCount = Object.values(glyphs).filter(strokes => strokes && strokes.length > 0).length;
 
@@ -114,7 +111,7 @@ function PreviewModal({
             />
             <PreviewSection
               title=""
-              previewText={debouncedPreviewText}
+              previewText={previewText}
               fontUrl={fontUrl}
               drawnCharCount={drawnCharCount}
               isCapsLock={isCapsLock}

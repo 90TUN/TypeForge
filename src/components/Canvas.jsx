@@ -35,7 +35,6 @@ export default function Canvas({
   const [showGuideHelp, setShowGuideHelp] = useState(false);
   const [activePenId, setActivePenId] = useState(null);
   const pointerIdRef = useRef(new Set());
-  const pointerDownTimeRef = useRef(0);
   const rafIdRef = useRef(null);
   const isLetter = /^[A-Za-z]$/.test(activeChar);
   const displayChar = isLetter && !isUpperCase ? activeChar.toLowerCase() : activeChar;

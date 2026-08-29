@@ -1,7 +1,7 @@
 // Canvas & Font Constants
 export const CANVAS_SIZE = 500;
 export const FONT_UNITS = 1000;
-export const BASELINE_RATIO = 0.8;
+export const BASELINE_RATIO = 0.6;
 export const SCALE = FONT_UNITS / CANVAS_SIZE;
 
 // Character Set - Paired lowercase/uppercase with singles for numbers/symbols

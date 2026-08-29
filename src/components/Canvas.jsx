@@ -13,6 +13,8 @@ function Canvas({
   handleMouseMove,
   handleMouseUp,
   deleteStroke,
+  setSelectedStrokeIndex,
+  setShowTransform,
   clearCurrentChar,
   bgPrimary,
   textPrimary,
@@ -372,7 +374,10 @@ function Canvas({
             const hasPressure = stroke.hasPresssure || (stroke.points && stroke.points.some(p => p.pressure && p.pressure !== 0.5));
             
             return (
-            <g key={i} style={{ cursor: 'pointer' }} onClick={() => deleteStroke(storageKey, i)} title={`Click to delete stroke ${i + 1}`}>
+            <g key={i} style={{ cursor: 'pointer' }} onClick={() => {
+              setSelectedStrokeIndex(i);
+              setShowTransform(true);
+            }} title={`Click to transform or delete stroke ${i + 1}`}>
               {hasPressure ? (
                 // Render with pressure-aware circles
                 <>

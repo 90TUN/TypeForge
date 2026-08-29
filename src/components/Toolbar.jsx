@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, RotateCw, Wand2, Scissors, Download, FileJson, AlertCircle, Copy, Clipboard } from 'lucide-react';
+import { RotateCcw, RotateCw, Wand2, Scissors, FileJson, AlertCircle, Copy, Clipboard, FlipHorizontal, FlipVertical } from 'lucide-react';
 
 export default function Toolbar({
   showToolbar,
@@ -16,9 +16,6 @@ export default function Toolbar({
   fontMetadata,
   setFontMetadata,
   exportJSON,
-  downloadFont,
-  otLoaded,
-  glyphs,
   clearAllCharacters,
   darkMode,
   bgSecondary,
@@ -31,7 +28,11 @@ export default function Toolbar({
   leftGuidePos,
   setLeftGuidePos,
   rightGuidePos,
-  setRightGuidePos
+  setRightGuidePos,
+  transformActions,
+  currentCharKey,
+  charBearings,
+  setCharBearings
 }) {
   if (!showToolbar) return null;
 
@@ -40,20 +41,23 @@ export default function Toolbar({
   const buttonPrimary = `${buttonBase} px-2 text-sm font-medium ${darkMode ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/50' : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-blue-500/30'}`;
   const buttonSecondary = `${buttonBase} px-2 text-sm font-medium ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 hover:shadow-lg hover:shadow-gray-600/50' : 'bg-gray-200 hover:bg-gray-300 text-gray-800 hover:shadow-lg hover:shadow-gray-300/50'}`;
   const buttonDanger = `${buttonBase} px-2 text-sm font-medium ${darkMode ? 'bg-red-700 hover:bg-red-600 text-white shadow-lg hover:shadow-red-500/50' : 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-red-500/30'}`;
-  
+
+  const currentLeftGuide = charBearings?.[currentCharKey]?.left ?? leftGuidePos ?? 0.2;
+  const currentRightGuide = charBearings?.[currentCharKey]?.right ?? rightGuidePos ?? 0.8;
+
   return (
     <div className={`border-b ${borderColor} ${bgSecondary} px-3 sm:px-6 py-2 max-h-28 overflow-y-auto transition-colors shrink-0`}>
       <div className="flex flex-wrap gap-4 items-center">
         
-        {/* DRAWING SETTINGS */}
-        <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${sectionBg} border ${borderColor}`}>
+        {/* DRAWING TOOLS */}
+        <div className={`flex gap-3 items-center px-3 py-2 rounded-lg ${sectionBg} border ${borderColor}`}>
           <div className="flex flex-col gap-1">
             <label className={`text-xs font-bold uppercase tracking-wider ${textSecondary}`}>Stroke</label>
             <div className="flex items-center gap-2">
               <input
                 type="range"
                 min="1"
-                max="10"
+                max="20"
                 value={strokeWidth}
                 onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
                 className="w-24 cursor-pointer h-1.5 accent-blue-500"
@@ -66,36 +70,44 @@ export default function Toolbar({
         {/* VERTICAL GUIDES */}
         <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${sectionBg} border ${borderColor}`}>
           <div className="flex flex-col gap-1">
-            <label className={`text-xs font-bold uppercase tracking-wider ${textSecondary}`}>Guides</label>
+            <label className={`text-xs font-bold uppercase tracking-wider ${textSecondary}`}>Bearings</label>
             <div className="flex items-center gap-2">
               <input
                 type="range"
                 min="0.05"
                 max="0.45"
                 step="0.05"
-                value={leftGuidePos}
+                value={currentLeftGuide}
                 onChange={(e) => {
                   const newVal = parseFloat(e.target.value);
-                  if (newVal < rightGuidePos - 0.1) setLeftGuidePos(newVal);
-                  localStorage.setItem('typeForgeLeftGuidePos', newVal);
+                  if (newVal < currentRightGuide - 0.1) {
+                    setCharBearings(prev => ({
+                      ...prev,
+                      [currentCharKey]: { ...(prev[currentCharKey] || {}), left: newVal }
+                    }));
+                  }
                 }}
                 className="w-20 cursor-pointer h-1.5 accent-purple-500"
-                title="Left guide position"
+                title="Left bearing"
               />
-              <span className={`text-xs font-bold ${textSecondary} w-12`}>{(leftGuidePos * 100).toFixed(0)}% - {(rightGuidePos * 100).toFixed(0)}%</span>
+              <span className={`text-xs font-bold ${textSecondary} w-12 text-center`}>{(currentLeftGuide * 100).toFixed(0)} - {(currentRightGuide * 100).toFixed(0)}</span>
               <input
                 type="range"
                 min="0.55"
                 max="0.95"
                 step="0.05"
-                value={rightGuidePos}
+                value={currentRightGuide}
                 onChange={(e) => {
                   const newVal = parseFloat(e.target.value);
-                  if (newVal > leftGuidePos + 0.1) setRightGuidePos(newVal);
-                  localStorage.setItem('typeForgeRightGuidePos', newVal);
+                  if (newVal > currentLeftGuide + 0.1) {
+                    setCharBearings(prev => ({
+                      ...prev,
+                      [currentCharKey]: { ...(prev[currentCharKey] || {}), right: newVal }
+                    }));
+                  }
                 }}
                 className="w-20 cursor-pointer h-1.5 accent-purple-500"
-                title="Right guide position"
+                title="Right bearing"
               />
             </div>
           </div>
@@ -119,6 +131,25 @@ export default function Toolbar({
             <Scissors size={16} />
             <span className="hidden sm:inline text-xs">Simplify</span>
           </button>
+          
+          {transformActions && (
+            <>
+              <button
+                onClick={() => transformActions.flipHorizontalNow(currentCharKey)}
+                className={`${buttonSecondary}`}
+                title="Flip Horizontal"
+              >
+                <FlipHorizontal size={16} />
+              </button>
+              <button
+                onClick={() => transformActions.flipVerticalNow(currentCharKey)}
+                className={`${buttonSecondary}`}
+                title="Flip Vertical"
+              >
+                <FlipVertical size={16} />
+              </button>
+            </>
+          )}
         </div>
 
         {/* HISTORY */}
@@ -181,15 +212,6 @@ export default function Toolbar({
           >
             <FileJson size={16} />
             <span className="hidden sm:inline text-xs">JSON</span>
-          </button>
-          <button 
-            onClick={downloadFont}
-            disabled={!otLoaded || Object.keys(glyphs).length === 0}
-            className={`${buttonPrimary} disabled:opacity-40`}
-            title="Export as .otf font file"
-          >
-            <Download size={16} />
-            <span className="hidden sm:inline text-xs">Export</span>
           </button>
         </div>
 

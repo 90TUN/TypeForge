@@ -2,11 +2,45 @@ import { useEffect } from 'react';
 import { loadOpenType } from '../utils/drawing';
 import { ALPHABET, CANVAS_SIZE, BASELINE_RATIO, SCALE, FONT_UNITS } from '../utils/constants';
 
-export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, strokeWidth) => {
+export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, strokeWidth, charRotation = {}, defaultLeftGuidePos, defaultRightGuidePos, charBearings = {}) => {
   useEffect(() => {
     if (!otLoaded) return;
     
     const timer = setTimeout(async () => {
+      // Helper function to calculate bounding box from path commands
+      const getPathBounds = (commands) => {
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+
+        commands.forEach(cmd => {
+          if (cmd.x !== undefined) {
+            minX = Math.min(minX, cmd.x);
+            maxX = Math.max(maxX, cmd.x);
+            minY = Math.min(minY, cmd.y);
+            maxY = Math.max(maxY, cmd.y);
+          }
+          if (cmd.x1 !== undefined) {
+            minX = Math.min(minX, cmd.x1);
+            maxX = Math.max(maxX, cmd.x1);
+            minY = Math.min(minY, cmd.y1);
+            maxY = Math.max(maxY, cmd.y1);
+          }
+          if (cmd.x2 !== undefined) {
+            minX = Math.min(minX, cmd.x2);
+            maxX = Math.max(maxX, cmd.x2);
+            minY = Math.min(minY, cmd.y2);
+            maxY = Math.max(maxY, cmd.y2);
+          }
+        });
+
+        return {
+          minX: minX === Infinity ? 0 : minX,
+          maxX: maxX === -Infinity ? 0 : maxX,
+          minY: minY === Infinity ? 0 : minY,
+          maxY: maxY === -Infinity ? 0 : maxY,
+        };
+      };
+
       // Helper function to create stroke outline from points
       const createStrokeOutline = (points, strokeWidth, scale) => {
         if (points.length < 2) return null;
@@ -41,8 +75,11 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
             dirY /= len;
           }
 
-          const perpX = -dirY * scaledWidth / 2;
-          const perpY = dirX * scaledWidth / 2;
+          const pointPressure = curr.pressure ?? 0.5;
+          const currentScaledWidth = scaledWidth * pointPressure * 2;
+
+          const perpX = -dirY * currentScaledWidth / 2;
+          const perpY = dirX * currentScaledWidth / 2;
 
           leftEdge.push({ x: x * scale + perpX, y: y * scale + perpY });
           rightEdge.push({ x: x * scale - perpX, y: y * scale - perpY });
@@ -67,6 +104,24 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
       
       const generateFont = async () => {
         const ot = await loadOpenType();
+
+        // Check if there are any drawn glyphs
+        const hasAnyGlyphs = ALPHABET.some(char => glyphs[char] && glyphs[char].length > 0);
+        
+        if (!hasAnyGlyphs) {
+          setFontUrl(prev => {
+            if (prev?.url) URL.revokeObjectURL(prev.url);
+            
+            document.fonts.forEach(f => {
+              if (f.family.startsWith(fontMetadata.family || 'TypeForge')) {
+                document.fonts.delete(f);
+              }
+            });
+            
+            return null;
+          });
+          return;
+        }
         
         const glyphArray = [];
         const notdefGlyph = new ot.Glyph({ name: '.notdef', advanceWidth: 600 });
@@ -75,6 +130,11 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
         glyphArray.push(notdefGlyph);
         glyphArray.push(spaceGlyph);
 
+        // Track bounds for all glyphs to calculate dynamic metrics
+        let globalMinY = Infinity;
+        let globalMaxY = -Infinity;
+        const glyphBounds = {};
+
         ALPHABET.forEach(char => {
           const strokes = glyphs[char];
           
@@ -82,11 +142,30 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
 
           const path = new ot.Path();
           let hasValidPath = false;
+          
+          const angle = charRotation[char] || 0;
+          const centerX = CANVAS_SIZE / 2;
+          const centerY = CANVAS_SIZE / 2;
+          const rad = (angle * Math.PI) / 180;
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
 
           strokes.forEach(stroke => {
             if (!stroke.points || stroke.points.length < 2) return;
 
-            const points = stroke.points;
+            let points = stroke.points;
+            if (angle !== 0) {
+              points = points.map(p => {
+                const x = p.x - centerX;
+                const y = p.y - centerY;
+                return {
+                  ...p,
+                  x: x * cos - y * sin + centerX,
+                  y: x * sin + y * cos + centerY
+                };
+              });
+            }
+
             const strokeOutline = createStrokeOutline(points, strokeWidth, SCALE);
             
             if (strokeOutline) {
@@ -103,21 +182,54 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
           });
 
           if (hasValidPath) {
+            // Apply left bearing shift
+            const charL = charBearings[char]?.left ?? defaultLeftGuidePos ?? 0.2;
+            const charR = charBearings[char]?.right ?? defaultRightGuidePos ?? 0.8;
+
+            const leftBearingShift = CANVAS_SIZE * charL;
+            const commands = path.commands;
+            
+            // Shift all X coordinates left by the left guide position
+            commands.forEach(cmd => {
+              if (cmd.x !== undefined) cmd.x -= leftBearingShift;
+              if (cmd.x1 !== undefined) cmd.x1 -= leftBearingShift;
+              if (cmd.x2 !== undefined) cmd.x2 -= leftBearingShift;
+            });
+
+            // Get bounds for this glyph
+            const bounds = getPathBounds(path.commands);
+            glyphBounds[char] = bounds;
+            globalMinY = Math.min(globalMinY, bounds.minY);
+            globalMaxY = Math.max(globalMaxY, bounds.maxY);
+
+            // Calculate advanceWidth based on right guide - left guide
+            const rightBearingPos = CANVAS_SIZE * charR;
+            const advanceWidth = rightBearingPos - leftBearingShift;
+
             glyphArray.push(new ot.Glyph({
               name: char,
               unicode: char.charCodeAt(0),
-              advanceWidth: 800,
+              advanceWidth: Math.max(Math.ceil(advanceWidth), 100), // Minimum width
               path
             }));
           }
         });
 
+        // Calculate dynamic ascender and descender based on glyphs
+        const ascender = globalMaxY === -Infinity ? 800 : Math.ceil(globalMaxY);
+        // Descender MUST be negative for opentype.js
+        const descender = globalMinY === Infinity ? -200 : Math.min(Math.floor(globalMinY), -1);
+
         const font = new ot.Font({
           familyName: fontMetadata.family || 'TypeForge',
           styleName: 'Regular',
+          version: fontMetadata.version || 'Version 1.0',
+          designer: fontMetadata.author || '',
+          copyright: fontMetadata.copyright || '',
           unitsPerEm: FONT_UNITS,
-          ascender: 800,
-          descender: -200,
+          ascender: ascender,
+          descender: descender,
+          lineGap: 0,
           glyphs: glyphArray
         });
 
@@ -125,17 +237,26 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
           const blob = new Blob([font.toArrayBuffer()], { type: 'font/otf' });
           const url = URL.createObjectURL(blob);
           
+          // Generate a unique family name for this specific build to prevent browser font fallback caching
+          const uniqueFamilyName = `${fontMetadata.family || 'TypeForge'}-${Date.now()}`;
+          
           setFontUrl(prev => {
             if (prev?.url) {
               URL.revokeObjectURL(prev.url);
             }
             
-            const fontFace = new FontFace(fontMetadata.family, `url(${url})`);
+            const fontFace = new FontFace(uniqueFamilyName, `url(${url})`);
             fontFace.load().then(() => {
+              // Clean up old fonts with similar names from this session
+              document.fonts.forEach(f => {
+                if (f.family.startsWith(fontMetadata.family || 'TypeForge')) {
+                  document.fonts.delete(f);
+                }
+              });
               document.fonts.add(fontFace);
             }).catch(e => console.error('Failed to load font face:', e));
             
-            return { name: fontMetadata.family, url };
+            return { name: uniqueFamilyName, url };
           });
         } catch (err) {
           console.error('Font generation failed:', err);
@@ -146,5 +267,5 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [glyphs, fontMetadata, otLoaded, setFontUrl, strokeWidth]);
+  }, [glyphs, fontMetadata, otLoaded, setFontUrl, strokeWidth, charRotation, defaultLeftGuidePos, defaultRightGuidePos, charBearings]);
 };

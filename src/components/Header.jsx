@@ -1,5 +1,5 @@
-import React, { memo } from 'react';
-import { PenTool, Download, Settings, Menu, X } from 'lucide-react';
+import { memo } from 'react';
+import { PenTool, Download, Settings, X, Wrench } from 'lucide-react';
 
 function Header({
   darkMode,
@@ -31,7 +31,7 @@ function Header({
           className={`p-2 ${bgSecondary} border ${borderColor} rounded-lg transition hover:opacity-75`}
           title="Toggle toolbar"
         >
-          {showToolbar ? <X size={18} /> : <Menu size={18} />}
+          {showToolbar ? <X size={18} /> : <Wrench size={18} />}
         </button>
 
         <button 

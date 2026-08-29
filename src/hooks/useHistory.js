@@ -33,9 +33,9 @@ export const useHistory = (
     });
     setCharHistoryIndex(prev => ({
       ...prev,
-      [charKey]: (charHistory[charKey]?.length ?? 1)
+      [charKey]: (prev[charKey] ?? 0) + 1
     }));
-  }, [charHistory, charHistoryIndex, setCharHistory, setCharHistoryIndex]);
+  }, [charHistoryIndex, setCharHistory, setCharHistoryIndex]);
 
   const undo = useCallback(() => {
     const charKey = getCurrentCharKey();

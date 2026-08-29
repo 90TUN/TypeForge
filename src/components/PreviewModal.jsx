@@ -10,29 +10,37 @@ const PreviewSection = memo(({ title, previewText, fontUrl, drawnCharCount, isCa
   return (
     <div className="flex flex-col gap-2">
       <h3 className={`text-sm font-semibold ${textSecondary}`}>{title}</h3>
-      {fontUrl && drawnCharCount > 0 ? (
+      {fontUrl ? (
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3 border ${borderColor}`}>
-          <div className="space-y-2">
-            {[12, 18, 24].map(size => (
-              <div
-                key={size}
-                style={{
-                  fontSize: `${size}px`,
-                  fontFamily: `'${fontUrl.name}', monospace`,
-                  lineHeight: '1.4',
-                  letterSpacing: '0.05em'
-                }}
-                className={`${textPrimary} break-words`}
-              >
-                {getDisplayText(previewText) || 'Type text...'}
-              </div>
-            ))}
-          </div>
+          {drawnCharCount > 0 ? (
+            <div className="space-y-2">
+              {[12, 18, 24].map(size => (
+                <div
+                  key={size}
+                  style={{
+                    fontSize: `${size}px`,
+                    fontFamily: `'${fontUrl.name}', monospace`,
+                    lineHeight: '1.4',
+                    letterSpacing: '0.05em'
+                  }}
+                  className={`${textPrimary} break-words`}
+                >
+                  {getDisplayText(previewText) || 'Type text...'}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-20">
+              <p className={`text-sm text-center ${textSecondary}`}>
+                Draw characters to preview
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4 border ${borderColor} flex items-center justify-center h-20`}>
           <p className={`text-sm text-center ${textSecondary}`}>
-            Draw characters to preview
+            Generate a font first
           </p>
         </div>
       )}

@@ -14,6 +14,7 @@ export default function TransformPanel({
   borderColor,
   textPrimary,
   textSecondary,
+  deleteStroke,
 }) {
   const [rotation, setRotation] = useState(0);
   const [scaleX, setScaleX] = useState(1);
@@ -128,6 +129,18 @@ export default function TransformPanel({
           </div>
 
           <div className="flex gap-2">
+            <button
+              onClick={() => {
+                deleteStroke(storageKey, selectedStrokeIndex);
+                setShowTransform(false);
+                setRotation(0);
+                setScaleX(1);
+                setScaleY(1);
+              }}
+              className={`flex-1 px-3 py-2 text-sm font-medium rounded ${darkMode ? 'bg-red-700 hover:bg-red-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'} transition`}
+            >
+              Delete
+            </button>
             <button
               onClick={() => {
                 setRotation(0);

@@ -7,3 +7,4 @@ export { useHistory } from './useHistory';
 export { useGlyphActions } from './useGlyphActions';
 export { useKeyboardNavigation } from './useKeyboardNavigation';
 export { useFontGenerator } from './useFontGenerator';
+export { useTransformGlyph } from './useTransformGlyph';

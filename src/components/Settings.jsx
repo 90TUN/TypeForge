@@ -40,7 +40,7 @@ export default function Settings({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className={`${bgSecondary} border ${borderColor} rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto`}>
+      <div className={`${bgSecondary} border ${borderColor} rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto custom-scrollbar`}>
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b ${borderColor} sticky top-0 ${bgSecondary}`}>
           <h2 className={`text-lg font-bold ${textPrimary}`}>Settings</h2>

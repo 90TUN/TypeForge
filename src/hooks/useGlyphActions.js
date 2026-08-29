@@ -44,6 +44,8 @@ export const useGlyphActions = (
       return;
     }
     setGlyphs({});
+    localStorage.removeItem('typeForgeGlyphs');
+    localStorage.removeItem('typeForgeCharHistory');
     setPendingClearAll(false);
     addToast('All characters cleared', 'warning');
   }, [pendingClearAll, setPendingClearAll, setGlyphs, addToast]);

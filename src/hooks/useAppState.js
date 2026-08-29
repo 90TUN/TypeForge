@@ -78,6 +78,10 @@ export const useAppState = () => {
     const saved = localStorage.getItem('typeForgeRightGuidePos');
     return saved ? parseFloat(saved) : 0.8;
   });
+  const [charTransformations, setCharTransformations] = useState(() => {
+    const saved = localStorage.getItem('typeForgeCharTransformations');
+    return saved ? JSON.parse(saved) : {};
+  });
 
   return {
     glyphs, setGlyphs,
@@ -111,5 +115,6 @@ export const useAppState = () => {
     simplifyTolerance, setSimplifyTolerance,
     leftGuidePos, setLeftGuidePos,
     rightGuidePos, setRightGuidePos,
+    charTransformations, setCharTransformations,
   };
 };

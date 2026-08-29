@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Header from './components/Header';
 import Toolbar from './components/Toolbar';
 import Canvas from './components/Canvas';
@@ -8,7 +8,9 @@ import MobileBottomBar from './components/MobileBottomBar';
 import IntroModal from './components/IntroModal';
 import PreviewModal from './components/PreviewModal';
 import Settings from './components/Settings';
+import MetadataModal from './components/MetadataModal';
 import ToastContainer from './components/ToastContainer';
+import TransformPanel from './components/TransformPanel';
 import { loadOpenType } from './utils/drawing';
 import { PREVIEW_SIZES, FONT_UNITS } from './utils/constants';
 import {
@@ -20,11 +22,19 @@ import {
   useHistory,
   useGlyphActions,
   useKeyboardNavigation,
-  useFontGenerator
+  useFontGenerator,
+  useTransformGlyph
 } from './hooks';
 
 function App() {
   const svgRef = useRef(null);
+  const [showTransform, setShowTransform] = React.useState(false);
+  const [selectedStrokeIndex, setSelectedStrokeIndex] = React.useState(null);
+  const [showMetadataModal, setShowMetadataModal] = useState(false);
+  const [charBearings, setCharBearings] = useState(() => {
+    const saved = localStorage.getItem('typeForgeCharBearings');
+    return saved ? JSON.parse(saved) : {};
+  });
   
   // State management
   const state = useAppState();
@@ -59,6 +69,17 @@ function App() {
     updateHistory
   );
 
+  // Transform actions
+  const transformActions = useTransformGlyph(
+    state.glyphs,
+    state.setGlyphs,
+    state.charTransformations,
+    state.setCharTransformations,
+    getCurrentCharKey,
+    updateHistory,
+    addToast
+  );
+
   // Glyph actions (copy, paste, clear, download, export)
   const { copyGlyph, pasteGlyph, clearAllCharacters, downloadFont, exportJSON } = useGlyphActions(
     state.glyphs,
@@ -88,8 +109,18 @@ function App() {
     loadOpenType().then(() => state.setOtLoaded(true)).catch(e => console.error('Failed to load opentype.js', e));
   }, [state]);
 
-  // Font generation
-  useFontGenerator(state.glyphs, state.fontMetadata, state.otLoaded, state.setFontUrl, state.strokeWidth);
+  // Setup font generation
+  useFontGenerator(
+    state.glyphs,
+    state.fontMetadata,
+    state.otLoaded,
+    state.setFontUrl,
+    state.strokeWidth,
+    state.charRotation,
+    state.leftGuidePos,
+    state.rightGuidePos,
+    charBearings
+  );
 
   // Keyboard navigation
   useKeyboardNavigation(state.activeChar, state.setActiveChar, undo, redo, clearCurrentChar);
@@ -100,7 +131,7 @@ function App() {
         darkMode={darkMode}
         showToolbar={state.showToolbar}
         setShowToolbar={state.setShowToolbar}
-        downloadFont={downloadFont}
+        downloadFont={() => setShowMetadataModal(true)}
         otLoaded={state.otLoaded}
         glyphs={state.glyphs}
         bgSecondary={bgSecondary}
@@ -125,7 +156,7 @@ function App() {
         fontMetadata={state.fontMetadata}
         setFontMetadata={state.setFontMetadata}
         exportJSON={exportJSON}
-        downloadFont={downloadFont}
+        downloadFont={() => setShowMetadataModal(true)}
         otLoaded={state.otLoaded}
         glyphs={state.glyphs}
         darkMode={darkMode}
@@ -141,6 +172,10 @@ function App() {
         setLeftGuidePos={state.setLeftGuidePos}
         rightGuidePos={state.rightGuidePos}
         setRightGuidePos={state.setRightGuidePos}
+        transformActions={transformActions}
+        currentCharKey={currentCharKey}
+        charBearings={charBearings}
+        setCharBearings={setCharBearings}
       />
 
       <main className={`flex-1 grid grid-cols-[60px_1fr] lg:grid-cols-[280px_1fr_320px] gap-0 overflow-hidden`}>
@@ -167,6 +202,8 @@ function App() {
           handleMouseMove={handleMouseMove}
           handleMouseUp={handleMouseUp}
           deleteStroke={deleteStroke}
+          setSelectedStrokeIndex={setSelectedStrokeIndex}
+          setShowTransform={setShowTransform}
           clearCurrentChar={clearCurrentChar}
           bgPrimary={bgPrimary}
           textSecondary={textSecondary}
@@ -251,6 +288,22 @@ function App() {
         textSecondary={textSecondary}
       />
 
+      <TransformPanel
+        showTransform={showTransform}
+        setShowTransform={setShowTransform}
+        selectedStrokeIndex={selectedStrokeIndex}
+        glyphs={state.glyphs}
+        activeChar={state.activeChar}
+        isUpperCase={state.isUpperCase}
+        setGlyphs={state.setGlyphs}
+        darkMode={darkMode}
+        bgSecondary={bgSecondary}
+        borderColor={borderColor}
+        textPrimary={textPrimary}
+        textSecondary={textSecondary}
+        deleteStroke={deleteStroke}
+      />
+
       <PreviewModal
         isOpen={state.showPreviewModal}
         onClose={() => state.setShowPreviewModal(false)}
@@ -259,6 +312,19 @@ function App() {
         fontUrl={state.fontUrl}
         glyphs={state.glyphs}
         otLoaded={state.otLoaded}
+        darkMode={darkMode}
+        bgSecondary={bgSecondary}
+        borderColor={borderColor}
+        textPrimary={textPrimary}
+        textSecondary={textSecondary}
+      />
+
+      <MetadataModal
+        show={showMetadataModal}
+        setShow={setShowMetadataModal}
+        metadata={state.fontMetadata}
+        setMetadata={state.setFontMetadata}
+        onDownload={downloadFont}
         darkMode={darkMode}
         bgSecondary={bgSecondary}
         borderColor={borderColor}

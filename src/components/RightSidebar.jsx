@@ -2,11 +2,6 @@ import React, { useState, memo, useEffect, useRef } from 'react';
 import { PREVIEW_SIZES } from '../utils/constants';
 
 const PreviewSection = memo(({ title, previewText, fontUrl, previewSizes, drawnCharCount, isCapsLock, darkMode, bgSecondary, borderColor, textPrimary, textSecondary }) => {
-  const getDisplayText = (text) => {
-    if (!text) return '';
-    return isCapsLock ? text.toUpperCase() : text.toLowerCase();
-  };
-
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <h3 className={`text-xs font-bold uppercase ${textSecondary} mb-1.5 shrink-0`}>{title}</h3>
@@ -25,7 +20,7 @@ const PreviewSection = memo(({ title, previewText, fontUrl, previewSizes, drawnC
                 }}
                 className={`${textPrimary} break-words`}
               >
-                {getDisplayText(previewText) || 'Type text...'}
+                {previewText || 'Type text...'}
               </div>
             ))}
           </div>
@@ -118,14 +113,8 @@ function RightSidebar({
     setIsCapsLock(e.getModifierState('CapsLock'));
   };
 
-  // Apply case based on caps lock
-  const getDisplayText = (text) => {
-    if (!text) return '';
-    return isCapsLock ? text.toUpperCase() : text.toLowerCase();
-  };
-
   return (
-    <section className={`border-l ${borderColor} p-3 sm:p-4 ${bgSecondary} transition-colors hidden lg:flex lg:flex-col overflow-hidden gap-3 h-full`}>
+    <section className={`border-l ${borderColor} p-3 sm:p-4 ${bgSecondary} transition-colors hidden lg:flex lg:flex-col overflow-y-auto custom-scrollbar gap-3 h-full`}>
       
       {/* PREVIEW 1 */}
       <div className="flex-1 flex flex-col min-h-0">
@@ -139,7 +128,7 @@ function RightSidebar({
           onKeyUp={handleKeyUp}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-          placeholder="Type here... (capslock controls case)"
+          placeholder="Type here..."
           maxLength="100"
           className={`w-full h-10 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-2 ${textPrimary} text-xs outline-none border ${borderColor} focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none shrink-0 mb-1.5`}
         />
@@ -248,7 +237,7 @@ function RightSidebar({
               }}
               className={`${textPrimary} break-words`}
             >
-              {getDisplayText(previewText2) || 'Type text...'}
+              {previewText2 || 'Type text...'}
             </div>
           </div>
         ) : (

@@ -11,13 +11,32 @@ export default function PaperSetup({
   textSecondary
 }) {
   const handleDownloadTemplate = async () => {
-    const dataUrl = await generateTemplateImage();
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = 'TypeForge-Template.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    try {
+      const blob = await generateTemplateImage();
+      const file = new File([blob], 'TypeForge-Template.png', { type: 'image/png' });
+
+      // Try native share first for mobile devices
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'TypeForge Template',
+          text: 'Print this template to draw your font!',
+        });
+      } else {
+        // Fallback for desktop / unsupported browsers
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = 'TypeForge-Template.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      // If share was aborted, it throws an AbortError. Ignore it.
+    }
   };
 
   return (

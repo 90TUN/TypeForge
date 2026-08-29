@@ -94,8 +94,10 @@ export const generateTemplateImage = () => {
       }
     }
 
-    // Resolve as PNG DataURL
-    resolve(canvas.toDataURL('image/png'));
+    // Resolve as PNG Blob
+    canvas.toBlob((blob) => {
+      resolve(blob);
+    }, 'image/png');
   });
 };
 

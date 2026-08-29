@@ -36,9 +36,9 @@ export const generateTemplateImage = () => {
     ctx.textAlign = 'center';
     ctx.fillText('TypeForge Drawing Template', CANVAS_WIDTH / 2, MARGIN - 50);
 
-    // 4. Calculate Grid (8 columns x 12 rows = 96 boxes)
+    // 4. Calculate Grid (8 columns x 13 rows = 104 boxes)
     const cols = 8;
-    const rows = 12;
+    const rows = 13;
     const gridWidth = CANVAS_WIDTH - (MARGIN * 2);
     const gridHeight = CANVAS_HEIGHT - (MARGIN * 2);
     const cellW = gridWidth / cols;

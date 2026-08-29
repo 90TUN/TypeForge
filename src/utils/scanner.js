@@ -12,7 +12,7 @@ export const processTemplateImage = async (img, cropRect) => {
   const gridH = img.height * (cropRect.bottom - cropRect.top);
   
   const cols = 8;
-  const rows = 12;
+  const rows = 13;
   const cellW = gridW / cols;
   const cellH = gridH / rows;
 

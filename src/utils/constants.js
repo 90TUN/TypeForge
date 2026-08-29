@@ -6,7 +6,7 @@ export const SCALE = FONT_UNITS / CANVAS_SIZE;
 
 // Character Set - Paired lowercase/uppercase with singles for numbers/symbols
 const letterPairs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(c => [c, c.toLowerCase()]);
-const numberAndSymbols = "0123456789!@#$%^&*()-_=+[]{}|;:',.<>?/~`".split("").map(c => [c]);
+const numberAndSymbols = "0123456789!@#$%^&*()-_=+[]{}|;:',.<>?/~`\"\\£€¥¢©®°±÷×".split("").map(c => [c]);
 export const CHARACTER_GROUPS = [...letterPairs, ...numberAndSymbols];
 
 // Flat alphabet for font generation and references

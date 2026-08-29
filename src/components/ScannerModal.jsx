@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Upload, Play, ArrowLeft } from 'lucide-react';
+import { Upload, ArrowLeft } from 'lucide-react';
 import { processTemplateImage } from '../utils/scanner';
 
 export default function ScannerModal({
@@ -258,7 +258,7 @@ export default function ScannerModal({
         </div>
         
         {imageSrc && (
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
             <button
               onClick={() => setImageSrc(null)}
               className={`hidden sm:block px-4 py-2 rounded-xl font-semibold text-sm transition ${darkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-200'}`}
@@ -268,10 +268,9 @@ export default function ScannerModal({
             <button
               onClick={handleExtract}
               disabled={isProcessing}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-white transition ${isProcessing ? 'bg-gray-500 cursor-wait' : 'bg-green-600 hover:bg-green-500'}`}
+              className={`flex items-center justify-center min-w-[100px] px-4 py-2 rounded-xl font-bold text-sm text-white transition ${isProcessing ? 'bg-gray-500 cursor-wait' : 'bg-green-600 hover:bg-green-500'}`}
             >
-              {isProcessing ? '...' : <Play size={16} />}
-              <span className="hidden sm:inline">{isProcessing ? 'Processing' : 'Extract'}</span>
+              <span>{isProcessing ? 'Processing...' : 'Extract'}</span>
             </button>
           </div>
         )}

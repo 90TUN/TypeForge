@@ -40,9 +40,9 @@ export default function FontTester({
   }, [fontUrl]);
 
   return (
-    <div className={`flex flex-col h-full w-full ${darkMode ? 'bg-[#0f1115]' : 'bg-gray-100'} animate-fadeIn`}>
+    <div className={`flex flex-col h-full w-full ${darkMode ? 'bg-[#0f1115]' : 'bg-gray-100'} animate-fadeIn overflow-y-auto`}>
       {/* Header */}
-      <header className={`flex items-center p-3 sm:p-4 border-b ${borderColor} ${bgSecondary} shrink-0 shadow-sm z-10`}>
+      <header className={`sticky top-0 flex items-center p-3 sm:p-4 border-b ${borderColor} ${bgSecondary} shrink-0 shadow-sm z-20`}>
         <button 
           onClick={() => setAppMode('intro')}
           className={`p-2 rounded-lg hover:${darkMode ? 'bg-gray-700' : 'bg-gray-200'} transition shrink-0 mr-4`}

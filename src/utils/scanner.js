@@ -46,8 +46,26 @@ export const processTemplateImage = async (img, cropRect) => {
 
       const imageData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       const strokes = traceImage(imageData);
+      
       if (strokes && strokes.length > 0) {
-        extractedGlyphs[char] = strokes;
+        // Calculate total bounding box of all strokes in this cell
+        let minX = CANVAS_SIZE, minY = CANVAS_SIZE, maxX = 0, maxY = 0;
+        strokes.forEach(stroke => {
+          stroke.points.forEach(p => {
+            if (p.x < minX) minX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y > maxY) maxY = p.y;
+          });
+        });
+        
+        const bbWidth = maxX - minX;
+        const bbHeight = maxY - minY;
+        
+        // If the entire ink spans less than 3% of the cell, it's just a speck of dust, not a drawn letter.
+        if (bbWidth > CANVAS_SIZE * 0.03 || bbHeight > CANVAS_SIZE * 0.03) {
+          extractedGlyphs[char] = strokes;
+        }
       }
     }
   }

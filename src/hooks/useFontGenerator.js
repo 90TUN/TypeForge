@@ -239,9 +239,36 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
         });
 
         // Calculate dynamic ascender and descender based on glyphs
-        const ascender = globalMaxY === -Infinity ? 800 : Math.ceil(globalMaxY);
-        // Descender MUST be negative for opentype.js
-        const descender = globalMinY === Infinity ? -200 : Math.min(Math.floor(globalMinY), -1);
+        let ascender = globalMaxY === -Infinity ? 800 : Math.ceil(globalMaxY);
+        let descender = globalMinY === Infinity ? -200 : Math.min(Math.floor(globalMinY), -1);
+
+        // --- AUTO-NORMALIZATION ---
+        // A standard font usually has an ascender around 800 for a 1000 UPM EM box.
+        // If the user's highest glyph only reached 400 (or exceeded 1000), it will look disproportionate.
+        // We calculate a multiplier to scale all glyphs up/down to match standard typography metrics.
+        const TARGET_ASCENDER = 800;
+        
+        if (ascender > 0 && ascender !== TARGET_ASCENDER) {
+          const normalizeScale = TARGET_ASCENDER / ascender;
+          
+          glyphArray.forEach(glyph => {
+            glyph.advanceWidth = Math.round(glyph.advanceWidth * normalizeScale);
+            
+            if (glyph.path && glyph.path.commands) {
+              glyph.path.commands.forEach(cmd => {
+                if (cmd.x !== undefined) cmd.x = Math.round(cmd.x * normalizeScale);
+                if (cmd.y !== undefined) cmd.y = Math.round(cmd.y * normalizeScale);
+                if (cmd.x1 !== undefined) cmd.x1 = Math.round(cmd.x1 * normalizeScale);
+                if (cmd.y1 !== undefined) cmd.y1 = Math.round(cmd.y1 * normalizeScale);
+                if (cmd.x2 !== undefined) cmd.x2 = Math.round(cmd.x2 * normalizeScale);
+                if (cmd.y2 !== undefined) cmd.y2 = Math.round(cmd.y2 * normalizeScale);
+              });
+            }
+          });
+          
+          ascender = TARGET_ASCENDER;
+          descender = Math.round(descender * normalizeScale);
+        }
 
         const font = new ot.Font({
           familyName: fontMetadata.family || 'TypeForge',

@@ -9,35 +9,36 @@ export default function FontTester({
   textPrimary,
   textSecondary
 }) {
-  const [fontUrl, setFontUrl] = useState(null);
+  const [fontLoaded, setFontLoaded] = useState(false);
   const [fontName, setFontName] = useState('');
   const [testText, setTestText] = useState('The quick brown fox jumps over the lazy dog.\n\n1234567890\n\n!@#$%^&*()_+');
   const [fontSize, setFontSize] = useState(48);
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setFontUrl(url);
-      setFontName(file.name);
+      try {
+        const buffer = await file.arrayBuffer();
+        const font = new FontFace('CustomTestFont', buffer);
+        await font.load();
+        document.fonts.add(font);
+        setFontLoaded(true);
+        setFontName(file.name);
+      } catch (err) {
+        console.error('Failed to load font:', err);
+        alert('Failed to parse this font file. Make sure it is a valid .otf or .ttf file.');
+      }
     }
   };
 
   useEffect(() => {
-    if (fontUrl) {
-      const style = document.createElement('style');
-      style.innerHTML = `
-        @font-face {
-          font-family: 'CustomTestFont';
-          src: url('${fontUrl}');
-        }
-      `;
-      document.head.appendChild(style);
-      return () => {
-        document.head.removeChild(style);
-      };
-    }
-  }, [fontUrl]);
+    // Cleanup is tricky with FontFace, but we can just clear it on unmount
+    return () => {
+      document.fonts.forEach(f => {
+        if (f.family === 'CustomTestFont') document.fonts.delete(f);
+      });
+    };
+  }, []);
 
   return (
     <div className={`flex flex-col h-full w-full ${darkMode ? 'bg-[#0f1115]' : 'bg-gray-100'} animate-fadeIn overflow-y-auto`}>
@@ -58,7 +59,7 @@ export default function FontTester({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 overflow-hidden">
-        {!fontUrl ? (
+        {!fontLoaded ? (
           <div className={`max-w-md w-full ${bgSecondary} border ${borderColor} rounded-2xl p-8 shadow-xl text-center flex flex-col items-center`}>
             <div className={`w-16 h-16 mb-6 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-600'}`}>
               <Upload size={32} />
@@ -99,7 +100,7 @@ export default function FontTester({
                 </div>
                 
                 <button 
-                  onClick={() => { setFontUrl(null); setFontName(''); }}
+                  onClick={() => { setFontLoaded(false); setFontName(''); }}
                   className={`px-4 py-2 text-sm font-bold rounded-lg border ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-200'} transition-colors`}
                 >
                   Change

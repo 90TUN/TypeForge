@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import Toolbar from './components/Toolbar';
 import Canvas from './components/Canvas';
@@ -9,6 +10,9 @@ import IntroModal from './components/IntroModal';
 import PreviewModal from './components/PreviewModal';
 import Settings from './components/Settings';
 import MetadataModal from './components/MetadataModal';
+import ScannerModal from './components/ScannerModal';
+import PaperSetup from './components/PaperSetup';
+import PaperEditor from './components/PaperEditor';
 import ToastContainer from './components/ToastContainer';
 import TransformPanel from './components/TransformPanel';
 import { loadOpenType } from './utils/drawing';
@@ -28,6 +32,17 @@ import {
 
 function App() {
   const svgRef = useRef(null);
+  const navigate = useNavigate();
+  const setAppMode = (mode) => {
+    switch (mode) {
+      case 'intro': navigate('/'); break;
+      case 'digital': navigate('/digital'); break;
+      case 'paper-setup': navigate('/paper-setup'); break;
+      case 'scanner': navigate('/scanner'); break;
+      case 'paper': navigate('/paper'); break;
+      default: navigate('/');
+    }
+  };
   const [showTransform, setShowTransform] = React.useState(false);
   const [selectedStrokeIndex, setSelectedStrokeIndex] = React.useState(null);
   const [showMetadataModal, setShowMetadataModal] = useState(false);
@@ -127,142 +142,52 @@ function App() {
 
   return (
     <div className={`h-screen ${bgPrimary} ${textPrimary} flex flex-col font-sans transition-colors duration-300 overflow-hidden animate-fadeIn`}>
-      <Header
-        darkMode={darkMode}
-        showToolbar={state.showToolbar}
-        setShowToolbar={state.setShowToolbar}
-        downloadFont={() => setShowMetadataModal(true)}
-        otLoaded={state.otLoaded}
-        glyphs={state.glyphs}
-        bgSecondary={bgSecondary}
-        borderColor={borderColor}
-        textPrimary={textPrimary}
-        showSettings={state.showSettings}
-        setShowSettings={state.setShowSettings}
-      />
+      <Routes>
+        <Route path="/" element={
+          <IntroModal showIntro={true} setAppMode={setAppMode} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />
+        } />
+        
+        <Route path="/digital" element={
+          <>
+            <Header darkMode={darkMode} showToolbar={state.showToolbar} setShowToolbar={state.setShowToolbar} downloadFont={() => setShowMetadataModal(true)} otLoaded={state.otLoaded} glyphs={state.glyphs} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} showSettings={state.showSettings} setShowSettings={state.setShowSettings} />
+            <Toolbar showToolbar={state.showToolbar} strokeWidth={state.strokeWidth} setStrokeWidth={state.setStrokeWidth} enableSmoothing={state.enableSmoothing} setEnableSmoothing={state.setEnableSmoothing} enableSimplify={state.enableSimplify} setEnableSimplify={state.setEnableSimplify} undo={undo} redo={redo} currentHistoryIndex={currentHistoryIndex} currentHistory={currentHistory} fontMetadata={state.fontMetadata} setFontMetadata={state.setFontMetadata} exportJSON={exportJSON} downloadFont={() => setShowMetadataModal(true)} otLoaded={state.otLoaded} glyphs={state.glyphs} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textSecondary={textSecondary} textPrimary={textPrimary} clearAllCharacters={clearAllCharacters} copyGlyph={copyGlyph} pasteGlyph={pasteGlyph} clipboard={state.clipboard} leftGuidePos={state.leftGuidePos} setLeftGuidePos={state.setLeftGuidePos} rightGuidePos={state.rightGuidePos} setRightGuidePos={state.setRightGuidePos} transformActions={transformActions} currentCharKey={currentCharKey} charBearings={charBearings} setCharBearings={setCharBearings} />
+            <main className={`flex-1 grid grid-cols-[64px_1fr] lg:grid-cols-[280px_1fr_320px] gap-0 overflow-hidden`}>
+              <LeftSidebar activeChar={state.activeChar} setActiveChar={state.setActiveChar} glyphs={state.glyphs} fontUrl={state.fontUrl} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />
+              <Canvas svgRef={svgRef} activeChar={state.activeChar} glyphs={state.glyphs} currentStroke={state.currentStroke} strokeWidth={state.strokeWidth} darkMode={darkMode} handleMouseDown={handleMouseDown} handleMouseMove={handleMouseMove} handleMouseUp={handleMouseUp} deleteStroke={deleteStroke} setSelectedStrokeIndex={setSelectedStrokeIndex} setShowTransform={setShowTransform} clearCurrentChar={clearCurrentChar} bgPrimary={bgPrimary} textSecondary={textSecondary} isUpperCase={state.isUpperCase} setIsUpperCase={state.setIsUpperCase} gridEnabled={state.gridEnabled} gridSize={state.gridSize} snapToGrid={state.snapToGrid} guidesEnabled={state.guidesEnabled} copyGlyph={copyGlyph} pasteGlyph={pasteGlyph} clipboard={state.clipboard} showPreviewModal={state.showPreviewModal} setShowPreviewModal={state.setShowPreviewModal} textPrimary={textPrimary} charRotation={state.charRotation} setCharRotation={state.setCharRotation} currentCharKey={currentCharKey} leftGuidePos={state.leftGuidePos} rightGuidePos={state.rightGuidePos} />
+              <div className="hidden lg:block">
+                <RightSidebar previewText={state.previewText} setPreviewText={state.setPreviewText} fontUrl={state.fontUrl} previewSizes={PREVIEW_SIZES} glyphs={state.glyphs} activeChar={state.activeChar} otLoaded={state.otLoaded} FONT_UNITS={FONT_UNITS} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />
+              </div>
+            </main>
+            <MobileBottomBar activeChar={state.activeChar} setActiveChar={state.setActiveChar} otLoaded={state.otLoaded} glyphs={state.glyphs} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} />
+          </>
+        } />
 
-      <Toolbar
-        showToolbar={state.showToolbar}
-        strokeWidth={state.strokeWidth}
-        setStrokeWidth={state.setStrokeWidth}
-        enableSmoothing={state.enableSmoothing}
-        setEnableSmoothing={state.setEnableSmoothing}
-        enableSimplify={state.enableSimplify}
-        setEnableSimplify={state.setEnableSimplify}
-        undo={undo}
-        redo={redo}
-        currentHistoryIndex={currentHistoryIndex}
-        currentHistory={currentHistory}
-        fontMetadata={state.fontMetadata}
-        setFontMetadata={state.setFontMetadata}
-        exportJSON={exportJSON}
-        downloadFont={() => setShowMetadataModal(true)}
-        otLoaded={state.otLoaded}
-        glyphs={state.glyphs}
-        darkMode={darkMode}
-        bgSecondary={bgSecondary}
-        borderColor={borderColor}
-        textSecondary={textSecondary}
-        textPrimary={textPrimary}
-        clearAllCharacters={clearAllCharacters}
-        copyGlyph={copyGlyph}
-        pasteGlyph={pasteGlyph}
-        clipboard={state.clipboard}
-        leftGuidePos={state.leftGuidePos}
-        setLeftGuidePos={state.setLeftGuidePos}
-        rightGuidePos={state.rightGuidePos}
-        setRightGuidePos={state.setRightGuidePos}
-        transformActions={transformActions}
-        currentCharKey={currentCharKey}
-        charBearings={charBearings}
-        setCharBearings={setCharBearings}
-      />
-
-      <main className={`flex-1 grid grid-cols-[60px_1fr] lg:grid-cols-[280px_1fr_320px] gap-0 overflow-hidden`}>
-        <LeftSidebar
-          activeChar={state.activeChar}
-          setActiveChar={state.setActiveChar}
-          glyphs={state.glyphs}
-          fontUrl={state.fontUrl}
-          darkMode={darkMode}
-          bgSecondary={bgSecondary}
-          borderColor={borderColor}
-          textPrimary={textPrimary}
-          textSecondary={textSecondary}
-        />
-
-        <Canvas
-          svgRef={svgRef}
-          activeChar={state.activeChar}
-          glyphs={state.glyphs}
-          currentStroke={state.currentStroke}
-          strokeWidth={state.strokeWidth}
-          darkMode={darkMode}
-          handleMouseDown={handleMouseDown}
-          handleMouseMove={handleMouseMove}
-          handleMouseUp={handleMouseUp}
-          deleteStroke={deleteStroke}
-          setSelectedStrokeIndex={setSelectedStrokeIndex}
-          setShowTransform={setShowTransform}
-          clearCurrentChar={clearCurrentChar}
-          bgPrimary={bgPrimary}
-          textSecondary={textSecondary}
-          isUpperCase={state.isUpperCase}
-          setIsUpperCase={state.setIsUpperCase}
-          gridEnabled={state.gridEnabled}
-          gridSize={state.gridSize}
-          snapToGrid={state.snapToGrid}
-          guidesEnabled={state.guidesEnabled}
-          copyGlyph={copyGlyph}
-          pasteGlyph={pasteGlyph}
-          clipboard={state.clipboard}
-          showPreviewModal={state.showPreviewModal}
-          setShowPreviewModal={state.setShowPreviewModal}
-          textPrimary={textPrimary}
-          charRotation={state.charRotation}
-          setCharRotation={state.setCharRotation}
-          currentCharKey={currentCharKey}
-          leftGuidePos={state.leftGuidePos}
-          rightGuidePos={state.rightGuidePos}
-        />
-
-        <RightSidebar
-          previewText={state.previewText}
-          setPreviewText={state.setPreviewText}
-          fontUrl={state.fontUrl}
-          previewSizes={PREVIEW_SIZES}
-          glyphs={state.glyphs}
-          activeChar={state.activeChar}
-          otLoaded={state.otLoaded}
-          FONT_UNITS={FONT_UNITS}
-          darkMode={darkMode}
-          bgSecondary={bgSecondary}
-          borderColor={borderColor}
-          textPrimary={textPrimary}
-          textSecondary={textSecondary}
-        />
-      </main>
-
-      <MobileBottomBar
-        activeChar={state.activeChar}
-        setActiveChar={state.setActiveChar}
-        downloadFont={downloadFont}
-        otLoaded={state.otLoaded}
-        glyphs={state.glyphs}
-        darkMode={darkMode}
-        bgSecondary={bgSecondary}
-        borderColor={borderColor}
-      />
-
-      <IntroModal
-        showIntro={state.showIntro}
-        setShowIntro={state.setShowIntro}
-        darkMode={darkMode}
-        bgSecondary={bgSecondary}
-        borderColor={borderColor}
-        textPrimary={textPrimary}
-        textSecondary={textSecondary}
-      />
+        <Route path="/paper-setup" element={<PaperSetup setAppMode={setAppMode} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />} />
+        
+        <Route path="/scanner" element={
+          <ScannerModal
+            setAppMode={setAppMode}
+            darkMode={darkMode}
+            bgSecondary={bgSecondary}
+            borderColor={borderColor}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
+            onExtract={(extractedGlyphs) => {
+              state.setGlyphs(prev => {
+                const next = { ...prev };
+                for (const char in extractedGlyphs) {
+                  next[char] = extractedGlyphs[char];
+                }
+                return next;
+              });
+              setAppMode('paper');
+              addToast('success', `Successfully extracted ${Object.keys(extractedGlyphs).length} characters from template!`);
+            }}
+          />
+        } />
+        
+        <Route path="/paper" element={<PaperEditor glyphs={state.glyphs} setAppMode={setAppMode} setShowMetadataModal={setShowMetadataModal} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} otLoaded={state.otLoaded} />} />
+      </Routes>
 
       <Settings
         showSettings={state.showSettings}
@@ -331,6 +256,8 @@ function App() {
         textPrimary={textPrimary}
         textSecondary={textSecondary}
       />
+
+
 
       <ToastContainer toasts={state.toasts} removeToast={(id) => {
         state.setToasts(prev => prev.filter(toast => toast.id !== id));

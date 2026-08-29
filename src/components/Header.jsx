@@ -1,5 +1,7 @@
 import { memo } from 'react';
-import { PenTool, Download, Settings, X, Wrench } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { PenTool, Download, Settings, X, Wrench, ArrowLeft } from 'lucide-react';
+import { ALPHABET } from '../utils/constants';
 
 function Header({
   darkMode,
@@ -14,10 +16,20 @@ function Header({
   showSettings,
   setShowSettings
 }) {
+  const navigate = useNavigate();
+  const allFilled = ALPHABET.every(char => glyphs[char] && glyphs[char].length > 0);
+
   return (
-    <header className={`border-b ${borderColor} ${bgSecondary} px-3 sm:px-6 py-2.5 flex items-center justify-between transition-colors shrink-0`}>
+    <header className={`border-b ${borderColor} ${bgSecondary} px-2 sm:px-6 py-2.5 flex items-center justify-between transition-colors shrink-0`}>
       <div className="flex items-center gap-2 min-w-0">
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 ${darkMode ? 'bg-blue-600' : 'bg-blue-500'} rounded-lg flex items-center justify-center shrink-0`}>
+        <button 
+          onClick={() => navigate('/')}
+          className={`p-2 rounded-lg hover:${darkMode ? 'bg-gray-700' : 'bg-gray-200'} transition shrink-0 mr-1`}
+          title="Back to start"
+        >
+          <ArrowLeft className={textPrimary} size={20} />
+        </button>
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 ${darkMode ? 'bg-blue-600' : 'bg-blue-500'} rounded-lg flex items-center justify-center shrink-0 hidden sm:flex`}>
           <PenTool size={16} className="text-white" />
         </div>
         <div className="min-w-0">
@@ -44,9 +56,9 @@ function Header({
 
         <button 
           onClick={downloadFont}
-          disabled={!otLoaded || Object.keys(glyphs).length === 0}
+          disabled={!otLoaded || !allFilled}
           className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 ${darkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} rounded-lg font-semibold text-xs sm:text-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed`}
-          title="Export as .otf font file"
+          title={!allFilled ? "Please draw all characters before exporting" : "Export as .otf font file"}
         >
           <Download size={14} />
           <span className="hidden sm:inline">Export</span>

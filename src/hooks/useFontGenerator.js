@@ -166,45 +166,68 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
               });
             }
 
-            const strokeOutline = createStrokeOutline(points, strokeWidth, SCALE);
-            
-            if (strokeOutline) {
-              const commands = strokeOutline.commands;
-              commands.forEach(cmd => {
-                if (cmd.type === 'M') path.moveTo(cmd.x, cmd.y);
-                else if (cmd.type === 'L') path.lineTo(cmd.x, cmd.y);
-                else if (cmd.type === 'C') path.curveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y);
-                else if (cmd.type === 'Q') path.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y);
-                else if (cmd.type === 'Z') path.closePath();
-              });
+            if (stroke.isOutline) {
+              // Points are already a closed contour/polygon (e.g. from Scanner)
+              // We just need to map coordinates to font space
+              const mappedPoints = points.map(p => ({
+                x: p.x * SCALE,
+                y: (CANVAS_SIZE * BASELINE_RATIO - p.y) * SCALE
+              }));
+              path.moveTo(mappedPoints[0].x, mappedPoints[0].y);
+              for (let i = 1; i < mappedPoints.length; i++) {
+                path.lineTo(mappedPoints[i].x, mappedPoints[i].y);
+              }
+              path.closePath();
               hasValidPath = true;
+            } else {
+              // Regular drawn stroke - needs to be expanded into an outline based on strokeWidth
+              const strokeOutline = createStrokeOutline(points, strokeWidth, SCALE);
+              
+              if (strokeOutline) {
+                const commands = strokeOutline.commands;
+                commands.forEach(cmd => {
+                  if (cmd.type === 'M') path.moveTo(cmd.x, cmd.y);
+                  else if (cmd.type === 'L') path.lineTo(cmd.x, cmd.y);
+                  else if (cmd.type === 'C') path.curveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y);
+                  else if (cmd.type === 'Q') path.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y);
+                  else if (cmd.type === 'Z') path.closePath();
+                });
+                hasValidPath = true;
+              }
             }
           });
 
           if (hasValidPath) {
-            // Apply left bearing shift
-            const charL = charBearings[char]?.left ?? defaultLeftGuidePos ?? 0.2;
-            const charR = charBearings[char]?.right ?? defaultRightGuidePos ?? 0.8;
-
-            const leftBearingShift = CANVAS_SIZE * charL;
-            const commands = path.commands;
+            // Get initial bounds for this glyph
+            const bounds = getPathBounds(path.commands);
             
-            // Shift all X coordinates left by the left guide position
+            // Standard side padding in font units (e.g. 50 Canvas pixels * SCALE)
+            const sidePadding = 50 * SCALE;
+            
+            // Shift X so the leftmost ink starts exactly at sidePadding
+            const leftBearingShift = bounds.minX - sidePadding;
+            
+            const commands = path.commands;
             commands.forEach(cmd => {
               if (cmd.x !== undefined) cmd.x -= leftBearingShift;
               if (cmd.x1 !== undefined) cmd.x1 -= leftBearingShift;
               if (cmd.x2 !== undefined) cmd.x2 -= leftBearingShift;
             });
 
-            // Get bounds for this glyph
-            const bounds = getPathBounds(path.commands);
-            glyphBounds[char] = bounds;
+            // Update bounds after shift
+            glyphBounds[char] = {
+              minX: sidePadding,
+              maxX: (bounds.maxX - bounds.minX) + sidePadding,
+              minY: bounds.minY,
+              maxY: bounds.maxY
+            };
+            
             globalMinY = Math.min(globalMinY, bounds.minY);
             globalMaxY = Math.max(globalMaxY, bounds.maxY);
 
-            // Calculate advanceWidth based on right guide - left guide
-            const rightBearingPos = CANVAS_SIZE * charR;
-            const advanceWidth = rightBearingPos - leftBearingShift;
+            // Advance width is ink width + left padding + right padding
+            const inkWidth = bounds.maxX - bounds.minX;
+            const advanceWidth = inkWidth + (sidePadding * 2);
 
             glyphArray.push(new ot.Glyph({
               name: char,

@@ -26,13 +26,10 @@ export default function Toolbar({
   pasteGlyph,
   clipboard,
   leftGuidePos,
-  setLeftGuidePos,
   rightGuidePos,
-  setRightGuidePos,
   transformActions,
   currentCharKey,
   charBearings,
-  setCharBearings
 }) {
   if (!showToolbar) return null;
 
@@ -42,15 +39,13 @@ export default function Toolbar({
   const buttonSecondary = `${buttonBase} px-2 text-sm font-medium ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 hover:shadow-lg hover:shadow-gray-600/50' : 'bg-gray-200 hover:bg-gray-300 text-gray-800 hover:shadow-lg hover:shadow-gray-300/50'}`;
   const buttonDanger = `${buttonBase} px-2 text-sm font-medium ${darkMode ? 'bg-red-700 hover:bg-red-600 text-white shadow-lg hover:shadow-red-500/50' : 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-red-500/30'}`;
 
-  const currentLeftGuide = charBearings?.[currentCharKey]?.left ?? leftGuidePos ?? 0.2;
-  const currentRightGuide = charBearings?.[currentCharKey]?.right ?? rightGuidePos ?? 0.8;
-
   return (
-    <div className={`border-b ${borderColor} ${bgSecondary} px-3 sm:px-6 py-2 max-h-28 overflow-y-auto transition-colors shrink-0`}>
-      <div className="flex flex-wrap gap-4 items-center">
+
+    <div className={`border-b ${borderColor} ${bgSecondary} px-2 sm:px-6 py-2 overflow-x-auto custom-scrollbar transition-colors shrink-0`}>
+      <div className="flex flex-nowrap sm:flex-wrap gap-2 sm:gap-4 items-center w-max sm:w-auto">
         
         {/* DRAWING TOOLS */}
-        <div className={`flex gap-3 items-center px-3 py-2 rounded-lg ${sectionBg} border ${borderColor}`}>
+        <div className={`flex gap-3 items-center px-3 py-2 rounded-lg ${sectionBg} border ${borderColor} shrink-0`}>
           <div className="flex flex-col gap-1">
             <label className={`text-xs font-bold uppercase tracking-wider ${textSecondary}`}>Stroke</label>
             <div className="flex items-center gap-2">
@@ -60,61 +55,17 @@ export default function Toolbar({
                 max="20"
                 value={strokeWidth}
                 onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
-                className="w-24 cursor-pointer h-1.5 accent-blue-500"
+                className="w-24 cursor-pointer h-1.5 accent-blue-500 touch-none"
               />
               <span className={`text-xs font-bold ${textSecondary} w-6`}>{strokeWidth}px</span>
             </div>
           </div>
         </div>
 
-        {/* VERTICAL GUIDES */}
-        <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${sectionBg} border ${borderColor}`}>
-          <div className="flex flex-col gap-1">
-            <label className={`text-xs font-bold uppercase tracking-wider ${textSecondary}`}>Bearings</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="range"
-                min="0.05"
-                max="0.45"
-                step="0.05"
-                value={currentLeftGuide}
-                onChange={(e) => {
-                  const newVal = parseFloat(e.target.value);
-                  if (newVal < currentRightGuide - 0.1) {
-                    setCharBearings(prev => ({
-                      ...prev,
-                      [currentCharKey]: { ...(prev[currentCharKey] || {}), left: newVal }
-                    }));
-                  }
-                }}
-                className="w-20 cursor-pointer h-1.5 accent-purple-500"
-                title="Left bearing"
-              />
-              <span className={`text-xs font-bold ${textSecondary} w-12 text-center`}>{(currentLeftGuide * 100).toFixed(0)} - {(currentRightGuide * 100).toFixed(0)}</span>
-              <input
-                type="range"
-                min="0.55"
-                max="0.95"
-                step="0.05"
-                value={currentRightGuide}
-                onChange={(e) => {
-                  const newVal = parseFloat(e.target.value);
-                  if (newVal > currentLeftGuide + 0.1) {
-                    setCharBearings(prev => ({
-                      ...prev,
-                      [currentCharKey]: { ...(prev[currentCharKey] || {}), right: newVal }
-                    }));
-                  }
-                }}
-                className="w-20 cursor-pointer h-1.5 accent-purple-500"
-                title="Right bearing"
-              />
-            </div>
-          </div>
-        </div>
+
 
         {/* EFFECTS */}
-        <div className={`flex gap-2`}>
+        <div className={`flex gap-2 shrink-0`}>
           <button
             onClick={() => setEnableSmoothing(!enableSmoothing)}
             className={`${enableSmoothing ? buttonPrimary : buttonSecondary}`}
@@ -153,7 +104,7 @@ export default function Toolbar({
         </div>
 
         {/* HISTORY */}
-        <div className={`flex gap-1.5 px-2 py-1 rounded-lg ${sectionBg} border ${borderColor}`}>
+        <div className={`flex gap-1.5 px-2 py-1 rounded-lg ${sectionBg} border ${borderColor} shrink-0`}>
           <button
             onClick={undo}
             disabled={currentHistoryIndex <= 0}
@@ -183,7 +134,7 @@ export default function Toolbar({
         />
 
         {/* COPY/PASTE */}
-        <div className={`flex gap-1.5`}>
+        <div className={`flex gap-1.5 shrink-0`}>
           <button
             onClick={copyGlyph}
             className={`${buttonSecondary}`}
@@ -204,7 +155,7 @@ export default function Toolbar({
         </div>
 
         {/* EXPORT OPTIONS */}
-        <div className={`flex gap-1.5`}>
+        <div className={`flex gap-1.5 shrink-0`}>
           <button
             onClick={exportJSON}
             className={`${buttonSecondary}`}
@@ -216,7 +167,7 @@ export default function Toolbar({
         </div>
 
         {/* DANGER ZONE */}
-        <div className={`flex gap-1.5 ml-auto`}>
+        <div className={`flex gap-1.5 ml-auto shrink-0`}>
           <button
             onClick={clearAllCharacters}
             className={`${buttonDanger}`}

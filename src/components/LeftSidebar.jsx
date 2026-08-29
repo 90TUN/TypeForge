@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { ALPHABET, CHARACTER_GROUPS } from '../utils/constants';
 
-const CharButton = memo(({ group, idx, isPrimary, hasGlyph, activeChar, setActiveChar, displayText, darkMode, textPrimary, textSecondary }) => {
+const CharButton = memo(({ group, idx, isPrimary, status, activeChar, setActiveChar, displayText, darkMode, textPrimary, textSecondary }) => {
   return (
     <button
       onClick={() => setActiveChar(group[0])}
@@ -14,10 +14,10 @@ const CharButton = memo(({ group, idx, isPrimary, hasGlyph, activeChar, setActiv
       title={`Character ${displayText}`}
     >
       {displayText}
-      {hasGlyph && (
+      {status !== 'none' && (
         <div className="absolute top-0.5 right-0.5">
-          <CheckCircle2 size={6} className="text-green-500 hidden lg:block" />
-          <CheckCircle2 size={5} className="text-green-500 lg:hidden" />
+          <CheckCircle2 size={6} className={`${status === 'full' ? 'text-green-500' : 'text-orange-500'} hidden lg:block`} />
+          <CheckCircle2 size={5} className={`${status === 'full' ? 'text-green-500' : 'text-orange-500'} lg:hidden`} />
         </div>
       )}
     </button>
@@ -50,7 +50,8 @@ function LeftSidebar({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-1 lg:gap-1.5 overflow-y-auto flex-1 pr-1 hide-scrollbar">
         {CHARACTER_GROUPS.map((group, idx) => {
           const isPrimary = activeChar === group[0];
-          const hasGlyph = group.some(char => glyphs[char]);
+          const glyphCount = group.filter(char => glyphs[char] && glyphs[char].length > 0).length;
+          const status = glyphCount === group.length ? 'full' : (glyphCount > 0 ? 'partial' : 'none');
           const displayText = group.length === 2 ? `${group[0]}${group[1]}` : group[0];
           
           return (
@@ -59,7 +60,7 @@ function LeftSidebar({
               group={group}
               idx={idx}
               isPrimary={isPrimary}
-              hasGlyph={hasGlyph}
+              status={status}
               activeChar={activeChar}
               setActiveChar={setActiveChar}
               displayText={displayText}

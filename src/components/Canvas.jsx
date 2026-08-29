@@ -329,42 +329,6 @@ function Canvas({
                 opacity="0.4"
               />
 
-              {/* Vertical guides for letter width */}
-              {/* Left margin */}
-              <line
-                x1={CANVAS_SIZE * leftGuidePos}
-                y1="0"
-                x2={CANVAS_SIZE * leftGuidePos}
-                y2={CANVAS_SIZE}
-                stroke={darkMode ? '#8b5cf6' : '#7c3aed'}
-                strokeWidth="1"
-                strokeDasharray="4,4"
-                opacity="0.3"
-              />
-              
-              {/* Center line - 50% */}
-              <line
-                x1={CANVAS_SIZE * 0.5}
-                y1="0"
-                x2={CANVAS_SIZE * 0.5}
-                y2={CANVAS_SIZE}
-                stroke={darkMode ? '#ec4899' : '#db2777'}
-                strokeWidth="1"
-                strokeDasharray="2,2"
-                opacity="0.3"
-              />
-              
-              {/* Right margin */}
-              <line
-                x1={CANVAS_SIZE * rightGuidePos}
-                y1="0"
-                x2={CANVAS_SIZE * rightGuidePos}
-                y2={CANVAS_SIZE}
-                stroke={darkMode ? '#8b5cf6' : '#7c3aed'}
-                strokeWidth="1"
-                strokeDasharray="4,4"
-                opacity="0.3"
-              />
             </>
           )}
 
@@ -378,19 +342,47 @@ function Canvas({
               setSelectedStrokeIndex(i);
               setShowTransform(true);
             }} title={`Click to transform or delete stroke ${i + 1}`}>
-              {hasPressure ? (
-                // Render with pressure-aware circles
+              {stroke.isOutline ? (
+                // Fill polygon for scanned paths
+                <polygon
+                  points={stroke.rotatedPoints.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill={darkMode ? 'white' : 'black'}
+                  opacity="0.8"
+                />
+              ) : hasPressure ? (
+                // Render with pressure-aware line segments
                 <>
-                  {stroke.rotatedPoints.map((point, idx) => (
-                    <circle
-                      key={idx}
-                      cx={point.x}
-                      cy={point.y}
-                      r={Math.max((strokeWidth / 2) * (stroke.points[idx].pressure ?? 0.5), 1)}
-                      fill={darkMode ? 'white' : 'black'}
-                      opacity="0.8"
-                    />
-                  ))}
+                  {stroke.rotatedPoints.map((point, idx) => {
+                    if (idx === 0) {
+                      return (
+                        <circle
+                          key={`start-${idx}`}
+                          cx={point.x}
+                          cy={point.y}
+                          r={Math.max((strokeWidth / 2) * (stroke.points[idx].pressure ?? 0.5), 1)}
+                          fill={darkMode ? 'white' : 'black'}
+                          opacity="0.8"
+                        />
+                      );
+                    }
+                    const prev = stroke.rotatedPoints[idx - 1];
+                    const p1 = stroke.points[idx - 1].pressure ?? 0.5;
+                    const p2 = stroke.points[idx].pressure ?? 0.5;
+                    const avgPressure = (p1 + p2) / 2;
+                    return (
+                      <line
+                        key={`line-${idx}`}
+                        x1={prev.x}
+                        y1={prev.y}
+                        x2={point.x}
+                        y2={point.y}
+                        stroke={darkMode ? 'white' : 'black'}
+                        strokeWidth={Math.max(strokeWidth * avgPressure, 1)}
+                        strokeLinecap="round"
+                        opacity="0.8"
+                      />
+                    );
+                  })}
                 </>
               ) : (
                 // Standard polyline for non-pressure strokes
@@ -416,17 +408,35 @@ function Canvas({
             );
           })}
 
-          {/* Current stroke being drawn - render with pressure-aware circles */}
+          {/* Current stroke being drawn - render with pressure-aware line segments */}
           {currentStroke.map((point, idx) => {
-            const pressure = point.pressure ?? 0.5;
-            const radiusBase = (strokeWidth / 2) * pressure; // Radius scales with pressure
+            if (idx === 0) {
+              const pressure = point.pressure ?? 0.5;
+              return (
+                <circle
+                  key={`start-${idx}`}
+                  cx={point.x}
+                  cy={point.y}
+                  r={Math.max((strokeWidth / 2) * pressure, 1)}
+                  fill="#3b82f6"
+                  opacity="0.7"
+                />
+              );
+            }
+            const prev = currentStroke[idx - 1];
+            const p1 = prev.pressure ?? 0.5;
+            const p2 = point.pressure ?? 0.5;
+            const avgPressure = (p1 + p2) / 2;
             return (
-              <circle
-                key={idx}
-                cx={point.x}
-                cy={point.y}
-                r={Math.max(radiusBase, 1)}
-                fill="#3b82f6"
+              <line
+                key={`line-${idx}`}
+                x1={prev.x}
+                y1={prev.y}
+                x2={point.x}
+                y2={point.y}
+                stroke="#3b82f6"
+                strokeWidth={Math.max(strokeWidth * avgPressure, 1)}
+                strokeLinecap="round"
                 opacity="0.7"
               />
             );

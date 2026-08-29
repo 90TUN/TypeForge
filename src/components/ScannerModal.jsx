@@ -37,7 +37,7 @@ export default function ScannerModal({
     ctx.strokeRect(startX, startY, gridW, gridH);
 
     const cols = 8;
-    const rows = 12;
+    const rows = 13;
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
     

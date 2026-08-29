@@ -14,7 +14,10 @@ export default function PaperSetup({
     try {
       const blob = await generateTemplateImage();
       const file = new File([blob], 'TypeForge-Template.png', { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      // Only use native share on mobile devices. Desktop should always direct-download.
+      if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: 'TypeForge Template',

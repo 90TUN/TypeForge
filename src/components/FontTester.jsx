@@ -108,13 +108,14 @@ export default function FontTester({
               </div>
             </div>
 
-            <div className={`flex-1 ${bgSecondary} border ${borderColor} rounded-xl shadow-sm overflow-hidden flex flex-col relative`}>
+            <div className={`flex-1 min-h-[300px] flex flex-col relative`}>
+              <label className={`text-xs font-bold ${textSecondary} uppercase tracking-wider mb-2 ml-1`}>Type to preview:</label>
               <textarea
                 value={testText}
                 onChange={(e) => setTestText(e.target.value)}
                 style={{ fontFamily: 'CustomTestFont', fontSize: `${fontSize}px` }}
-                className={`w-full h-full p-6 sm:p-10 bg-transparent resize-none focus:outline-none ${textPrimary}`}
-                placeholder="Start typing to test your font..."
+                className={`w-full flex-1 p-4 sm:p-6 rounded-xl border-2 ${darkMode ? 'bg-gray-800 border-gray-700 focus:border-blue-500' : 'bg-white border-gray-300 focus:border-blue-500'} resize-none focus:outline-none ${textPrimary} shadow-sm transition-colors`}
+                placeholder="Start typing here to test your font..."
                 spellCheck="false"
               />
             </div>

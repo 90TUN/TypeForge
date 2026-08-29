@@ -13,6 +13,7 @@ import MetadataModal from './components/MetadataModal';
 import ScannerModal from './components/ScannerModal';
 import PaperSetup from './components/PaperSetup';
 import PaperEditor from './components/PaperEditor';
+import FontTester from './components/FontTester';
 import ToastContainer from './components/ToastContainer';
 import TransformPanel from './components/TransformPanel';
 import { loadOpenType } from './utils/drawing';
@@ -40,6 +41,7 @@ function App() {
       case 'paper-setup': navigate('/paper-setup'); break;
       case 'scanner': navigate('/scanner'); break;
       case 'paper': navigate('/paper'); break;
+      case 'preview': navigate('/preview'); break;
       default: navigate('/');
     }
   };
@@ -187,6 +189,8 @@ function App() {
         } />
         
         <Route path="/paper" element={<PaperEditor glyphs={state.glyphs} setAppMode={setAppMode} setShowMetadataModal={setShowMetadataModal} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} otLoaded={state.otLoaded} />} />
+        
+        <Route path="/preview" element={<FontTester setAppMode={setAppMode} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />} />
       </Routes>
 
       <Settings

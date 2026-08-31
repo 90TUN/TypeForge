@@ -238,18 +238,43 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
           }
         });
 
-        // Calculate dynamic ascender and descender based on glyphs
+        // --- AUTO-NORMALIZATION ---
+        // Calculate average Cap Height from uppercase letters.
+        // This prevents a single stray dot or tall flourish from ruining the scale of the entire font.
+        let capHeightSum = 0;
+        let capHeightCount = 0;
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(c => {
+          if (glyphBounds[c] && glyphBounds[c].maxY > 0) {
+            capHeightSum += glyphBounds[c].maxY;
+            capHeightCount++;
+          }
+        });
+        
+        let capHeight = capHeightCount > 0 ? (capHeightSum / capHeightCount) : globalMaxY;
+        
+        // If they drew no uppercase letters, fallback to lowercase 'x' height * 1.5
+        if (capHeightCount === 0) {
+           let xHeightSum = 0;
+           let xHeightCount = 0;
+           'abcdefghijklmnopqrstuvwxyz'.split('').forEach(c => {
+             if (glyphBounds[c] && glyphBounds[c].maxY > 0) {
+               xHeightSum += glyphBounds[c].maxY;
+               xHeightCount++;
+             }
+           });
+           if (xHeightCount > 0) {
+             capHeight = (xHeightSum / xHeightCount) * 1.5;
+           }
+        }
+
+        // A standard font usually has a Cap Height around 700 for a 1000 UPM EM box.
+        // If we scale their Cap Height to 700, the font will perfectly match Geist and standard system fonts!
+        const TARGET_CAP_HEIGHT = 700;
         let ascender = globalMaxY === -Infinity ? 800 : Math.ceil(globalMaxY);
         let descender = globalMinY === Infinity ? -200 : Math.min(Math.floor(globalMinY), -1);
 
-        // --- AUTO-NORMALIZATION ---
-        // A standard font usually has an ascender around 800 for a 1000 UPM EM box.
-        // If the user's highest glyph only reached 400 (or exceeded 1000), it will look disproportionate.
-        // We calculate a multiplier to scale all glyphs up/down to match standard typography metrics.
-        const TARGET_ASCENDER = 800;
-        
-        if (ascender > 0 && ascender !== TARGET_ASCENDER) {
-          const normalizeScale = TARGET_ASCENDER / ascender;
+        if (capHeight > 0 && capHeight !== TARGET_CAP_HEIGHT) {
+          const normalizeScale = TARGET_CAP_HEIGHT / capHeight;
           
           glyphArray.forEach(glyph => {
             glyph.advanceWidth = Math.round(glyph.advanceWidth * normalizeScale);
@@ -266,7 +291,7 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
             }
           });
           
-          ascender = TARGET_ASCENDER;
+          ascender = Math.round(ascender * normalizeScale);
           descender = Math.round(descender * normalizeScale);
         }
 

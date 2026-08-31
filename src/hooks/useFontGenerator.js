@@ -268,10 +268,8 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
         }
 
         // A standard font usually has a Cap Height around 700 for a 1000 UPM EM box.
-        // If we scale their Cap Height to 700, the font will perfectly match Geist and standard system fonts!
-        const TARGET_CAP_HEIGHT = 700;
-        let ascender = globalMaxY === -Infinity ? 800 : Math.ceil(globalMaxY);
-        let descender = globalMinY === Infinity ? -200 : Math.min(Math.floor(globalMinY), -1);
+        // We use 750 to give handwriting fonts a slightly larger x-height for legibility compared to rigid system fonts.
+        const TARGET_CAP_HEIGHT = 750;
 
         if (capHeight > 0 && capHeight !== TARGET_CAP_HEIGHT) {
           const normalizeScale = TARGET_CAP_HEIGHT / capHeight;
@@ -290,10 +288,14 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
               });
             }
           });
-          
-          ascender = Math.round(ascender * normalizeScale);
-          descender = Math.round(descender * normalizeScale);
         }
+
+        // CRITICAL FIX: We MUST hardcode the final ascender and descender to standard values!
+        // If we use the mathematical max/min of the user's drawings, a single stray dot or massive descender
+        // will cause the browser to create a huge line-box, which visually pushes the text down (un-centering it) 
+        // and forces the browser to scale the text down to fit standard line-heights!
+        const FINAL_ASCENDER = 800;
+        const FINAL_DESCENDER = -200;
 
         const font = new ot.Font({
           familyName: fontMetadata.family || 'TypeForge',
@@ -301,9 +303,9 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
           version: fontMetadata.version || 'Version 1.0',
           designer: fontMetadata.author || '',
           copyright: fontMetadata.copyright || '',
-          unitsPerEm: FONT_UNITS,
-          ascender: ascender,
-          descender: descender,
+          unitsPerEm: FONT_UNITS, // 1000
+          ascender: FINAL_ASCENDER,
+          descender: FINAL_DESCENDER,
           lineGap: 0,
           glyphs: glyphArray
         });

@@ -63,20 +63,36 @@ export const generateTemplateImage = () => {
         ctx.strokeStyle = '#aaaaaa';
         ctx.strokeRect(x, y, cellW, cellH);
 
-        // Draw inner guides (Baseline 60%, X-height 35%)
+        // Draw inner guides (Baseline 60%, X-height 35%, Cap-height 15%, Descender 85%)
         ctx.strokeStyle = '#e2e8f0'; // light gray dashed
         ctx.setLineDash([10, 10]);
         
-        // Baseline
+        // Cap-height / Upper limit
         ctx.beginPath();
-        ctx.moveTo(x, y + cellH * 0.6);
-        ctx.lineTo(x + cellW, y + cellH * 0.6);
+        ctx.moveTo(x, y + cellH * 0.15);
+        ctx.lineTo(x + cellW, y + cellH * 0.15);
         ctx.stroke();
 
         // X-height
         ctx.beginPath();
         ctx.moveTo(x, y + cellH * 0.35);
         ctx.lineTo(x + cellW, y + cellH * 0.35);
+        ctx.stroke();
+
+        // Baseline (Make this one slightly darker/solid so they know which is the floor)
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.setLineDash([]); // solid line for baseline
+        ctx.beginPath();
+        ctx.moveTo(x, y + cellH * 0.6);
+        ctx.lineTo(x + cellW, y + cellH * 0.6);
+        ctx.stroke();
+
+        // Descender / Lower limit
+        ctx.strokeStyle = '#e2e8f0'; // back to dashed
+        ctx.setLineDash([10, 10]);
+        ctx.beginPath();
+        ctx.moveTo(x, y + cellH * 0.85);
+        ctx.lineTo(x + cellW, y + cellH * 0.85);
         ctx.stroke();
 
         // Reset dash

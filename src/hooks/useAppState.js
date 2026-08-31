@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DEFAULT_THEME } from '../utils/themes';
 
 export const useAppState = () => {
@@ -26,7 +26,15 @@ export const useAppState = () => {
   const [otLoaded, setOtLoaded] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(() => {
     const saved = localStorage.getItem('typeForgeTheme');
-    return saved || DEFAULT_THEME;
+    if (saved) return saved;
+    
+    // Fall back to device settings if no theme is saved
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    }
+    return DEFAULT_THEME;
   });
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [enableSmoothing, setEnableSmoothing] = useState(false);
@@ -87,6 +95,28 @@ export const useAppState = () => {
     return saved ? JSON.parse(saved) : {};
   });
 
+  useEffect(() => {
+    // Listen for system theme changes only if user hasn't explicitly set a theme
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e) => {
+        if (!localStorage.getItem('typeForgeTheme')) {
+          setCurrentTheme(e.matches ? 'dark' : DEFAULT_THEME);
+        }
+      };
+      
+      // Modern browsers
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        // Fallback for older browsers
+        mediaQuery.addListener(handleChange);
+        return () => mediaQuery.removeListener(handleChange);
+      }
+    }
+  }, []);
+
   return {
     glyphs, setGlyphs,
     paperGlyphs, setPaperGlyphs,
@@ -98,7 +128,11 @@ export const useAppState = () => {
     fontUrl, setFontUrl,
     showIntro, setShowIntro,
     otLoaded, setOtLoaded,
-    currentTheme, setCurrentTheme,
+    currentTheme, 
+    setCurrentTheme: (theme) => {
+      localStorage.setItem('typeForgeTheme', theme);
+      setCurrentTheme(theme);
+    },
     strokeWidth, setStrokeWidth,
     enableSmoothing, setEnableSmoothing,
     enableSimplify, setEnableSimplify,

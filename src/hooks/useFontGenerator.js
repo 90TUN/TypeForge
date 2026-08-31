@@ -239,40 +239,49 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
         });
 
         // --- AUTO-NORMALIZATION ---
-        // Calculate average Cap Height from uppercase letters.
-        // This prevents a single stray dot or tall flourish from ruining the scale of the entire font.
-        let capHeightSum = 0;
-        let capHeightCount = 0;
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(c => {
-          if (glyphBounds[c] && glyphBounds[c].maxY > 0) {
-            capHeightSum += glyphBounds[c].maxY;
-            capHeightCount++;
+        // Legibility of a font in body text is almost entirely driven by its x-height.
+        // We will calculate the true x-height of flat lowercase letters (ignoring ascenders/descenders).
+        let xHeightSum = 0;
+        let xHeightCount = 0;
+        const flatLowercase = 'acemnorsuvwxz'.split('');
+        
+        flatLowercase.forEach(c => {
+          if (glyphBounds[c]) {
+            // True height from baseline (ignoring floaters or descenders below 0)
+            const h = glyphBounds[c].maxY - Math.max(0, glyphBounds[c].minY);
+            if (h > 0) {
+              xHeightSum += h;
+              xHeightCount++;
+            }
           }
         });
         
-        let capHeight = capHeightCount > 0 ? (capHeightSum / capHeightCount) : globalMaxY;
+        let measuredXHeight = xHeightCount > 0 ? (xHeightSum / xHeightCount) : 0;
         
-        // If they drew no uppercase letters, fallback to lowercase 'x' height * 1.5
-        if (capHeightCount === 0) {
-           let xHeightSum = 0;
-           let xHeightCount = 0;
-           'abcdefghijklmnopqrstuvwxyz'.split('').forEach(c => {
-             if (glyphBounds[c] && glyphBounds[c].maxY > 0) {
-               xHeightSum += glyphBounds[c].maxY;
-               xHeightCount++;
-             }
-           });
-           if (xHeightCount > 0) {
-             capHeight = (xHeightSum / xHeightCount) * 1.5;
-           }
+        // Fallback to uppercase if no lowercase letters were drawn
+        if (measuredXHeight === 0) {
+          let capHeightSum = 0;
+          let capHeightCount = 0;
+          const flatUppercase = 'HIMNTUVWXZ'.split('');
+          flatUppercase.forEach(c => {
+            if (glyphBounds[c]) {
+              const h = glyphBounds[c].maxY - Math.max(0, glyphBounds[c].minY);
+              if (h > 0) {
+                capHeightSum += h;
+                capHeightCount++;
+              }
+            }
+          });
+          const measuredCapHeight = capHeightCount > 0 ? (capHeightSum / capHeightCount) : globalMaxY;
+          measuredXHeight = measuredCapHeight * 0.72; // Standard ratio (approx 530 / 730)
         }
 
-        // A standard font usually has a Cap Height around 700 for a 1000 UPM EM box.
-        // We use 750 to give handwriting fonts a slightly larger x-height for legibility compared to rigid system fonts.
-        const TARGET_CAP_HEIGHT = 750;
+        // We scale the font so the x-height exactly matches standard modern web fonts (e.g. Inter).
+        // This guarantees lowercase body text is beautifully legible and matches system font sizes perfectly!
+        const TARGET_X_HEIGHT = 530;
 
-        if (capHeight > 0 && capHeight !== TARGET_CAP_HEIGHT) {
-          const normalizeScale = TARGET_CAP_HEIGHT / capHeight;
+        if (measuredXHeight > 0 && measuredXHeight !== TARGET_X_HEIGHT) {
+          const normalizeScale = TARGET_X_HEIGHT / measuredXHeight;
           
           glyphArray.forEach(glyph => {
             glyph.advanceWidth = Math.round(glyph.advanceWidth * normalizeScale);
@@ -290,12 +299,11 @@ export const useFontGenerator = (glyphs, fontMetadata, otLoaded, setFontUrl, str
           });
         }
 
-        // CRITICAL FIX: We MUST hardcode the final ascender and descender to standard values!
-        // If we use the mathematical max/min of the user's drawings, a single stray dot or massive descender
-        // will cause the browser to create a huge line-box, which visually pushes the text down (un-centering it) 
-        // and forces the browser to scale the text down to fit standard line-heights!
-        const FINAL_ASCENDER = 800;
-        const FINAL_DESCENDER = -200;
+        // CRITICAL FIX: We MUST hardcode the final ascender and descender to standard robust values!
+        // Using Inter/SF Pro metrics ensures the CSS line-box handles tall handwriting flourishes safely
+        // without pushing the text off-center or forcing the browser to scale the text down.
+        const FINAL_ASCENDER = 960;
+        const FINAL_DESCENDER = -250;
 
         const font = new ot.Font({
           familyName: fontMetadata.family || 'TypeForge',

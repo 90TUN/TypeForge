@@ -6,6 +6,10 @@ export const useAppState = () => {
     const saved = localStorage.getItem('typeForgeGlyphs');
     return saved ? JSON.parse(saved) : {};
   });
+  const [paperGlyphs, setPaperGlyphs] = useState(() => {
+    const saved = localStorage.getItem('typeForgePaperGlyphs');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [activeChar, setActiveChar] = useState('A');
   const [isUpperCase, setIsUpperCase] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -85,6 +89,7 @@ export const useAppState = () => {
 
   return {
     glyphs, setGlyphs,
+    paperGlyphs, setPaperGlyphs,
     activeChar, setActiveChar,
     isUpperCase, setIsUpperCase,
     isDrawing, setIsDrawing,

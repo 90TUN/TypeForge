@@ -1,4 +1,14 @@
 export const THEMES = {
+  editorial: {
+    name: 'Editorial',
+    bgPrimary: 'bg-[#f5f4f0]',
+    bgSecondary: 'bg-[#ffffff]',
+    textPrimary: 'text-[#111110]',
+    textSecondary: 'text-[#8a8880]',
+    borderColor: 'border-[#e2e0da]',
+    accentColor: 'bg-[#2563eb]',
+    accentHover: 'hover:bg-[#1d4ed8]',
+  },
   dark: {
     name: 'Dark',
     bgPrimary: 'bg-gray-950',
@@ -90,5 +100,5 @@ export const THEMES = {
     accentHover: 'hover:bg-[#33ff33]',
   },
 };
+export const DEFAULT_THEME = 'editorial';
 
-export const DEFAULT_THEME = 'dark';

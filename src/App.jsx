@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Toolbar from './components/Toolbar';
 import Canvas from './components/Canvas';
@@ -16,6 +16,7 @@ import PaperEditor from './components/PaperEditor';
 import FontTester from './components/FontTester';
 import ToastContainer from './components/ToastContainer';
 import TransformPanel from './components/TransformPanel';
+import NewProjectModal from './components/NewProjectModal';
 import { loadOpenType } from './utils/drawing';
 import { PREVIEW_SIZES, FONT_UNITS } from './utils/constants';
 import {
@@ -34,10 +35,22 @@ import {
 function App() {
   const svgRef = useRef(null);
   const navigate = useNavigate();
+
+  // Declare state first so setAppMode can reference showNewProject
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [showTransform, setShowTransform] = React.useState(false);
+  const [selectedStrokeIndex, setSelectedStrokeIndex] = React.useState(null);
+  const [showMetadataModal, setShowMetadataModal] = useState(false);
+  const [previewFontUrl, setPreviewFontUrl] = useState(null);
+  const [charBearings, setCharBearings] = useState(() => {
+    const saved = localStorage.getItem('typeForgeCharBearings');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const setAppMode = (mode) => {
     switch (mode) {
       case 'intro': navigate('/'); break;
-      case 'digital': navigate('/digital'); break;
+      case 'digital': setShowNewProject(true); break;
       case 'paper-setup': navigate('/paper-setup'); break;
       case 'scanner': navigate('/scanner'); break;
       case 'paper': navigate('/paper'); break;
@@ -45,16 +58,23 @@ function App() {
       default: navigate('/');
     }
   };
-  const [showTransform, setShowTransform] = React.useState(false);
-  const [selectedStrokeIndex, setSelectedStrokeIndex] = React.useState(null);
-  const [showMetadataModal, setShowMetadataModal] = useState(false);
-  const [charBearings, setCharBearings] = useState(() => {
-    const saved = localStorage.getItem('typeForgeCharBearings');
-    return saved ? JSON.parse(saved) : {};
-  });
-  
+
   // State management
   const state = useAppState();
+  const location = useLocation();
+  const isPaperMode = location.pathname.startsWith('/paper') || location.pathname.startsWith('/scanner');
+  
+  const activeGlyphs = isPaperMode ? state.paperGlyphs : state.glyphs;
+  const setActiveGlyphs = (newGlyphs) => {
+    if (isPaperMode) {
+      state.setPaperGlyphs(newGlyphs);
+      localStorage.setItem('typeForgePaperGlyphs', JSON.stringify(typeof newGlyphs === 'function' ? newGlyphs(state.paperGlyphs) : newGlyphs));
+    } else {
+      state.setGlyphs(newGlyphs);
+      localStorage.setItem('typeForgeGlyphs', JSON.stringify(typeof newGlyphs === 'function' ? newGlyphs(state.glyphs) : newGlyphs));
+    }
+  };
+
   const { addToast } = useToast(state.setToasts);
   const { getCurrentCharKey, currentCharKey } = useCharacterKey(state.activeChar, state.isUpperCase);
   const { darkMode, bgPrimary, bgSecondary, textPrimary, textSecondary, borderColor } = useTheme(state.currentTheme);
@@ -63,8 +83,8 @@ function App() {
   const { currentHistory, currentHistoryIndex, updateHistory, undo, redo, clearCurrentChar } = useHistory(
     state.charHistory,
     state.charHistoryIndex,
-    state.glyphs,
-    state.setGlyphs,
+    activeGlyphs,
+    setActiveGlyphs,
     state.setCharHistory,
     state.setCharHistoryIndex,
     getCurrentCharKey,
@@ -78,8 +98,8 @@ function App() {
     state.isDrawing,
     state.enableSmoothing,
     state.enableSimplify,
-    state.glyphs,
-    state.setGlyphs,
+    activeGlyphs,
+    setActiveGlyphs,
     state.setIsDrawing,
     state.setCurrentStroke,
     getCurrentCharKey,
@@ -88,8 +108,8 @@ function App() {
 
   // Transform actions
   const transformActions = useTransformGlyph(
-    state.glyphs,
-    state.setGlyphs,
+    activeGlyphs,
+    setActiveGlyphs,
     state.charTransformations,
     state.setCharTransformations,
     getCurrentCharKey,
@@ -99,8 +119,8 @@ function App() {
 
   // Glyph actions (copy, paste, clear, download, export)
   const { copyGlyph, pasteGlyph, clearAllCharacters, downloadFont, exportJSON } = useGlyphActions(
-    state.glyphs,
-    state.setGlyphs,
+    activeGlyphs,
+    setActiveGlyphs,
     state.fontUrl,
     state.fontMetadata,
     state.clipboard,
@@ -114,10 +134,10 @@ function App() {
 
   // Delete stroke helper
   const deleteStroke = (char, index) => {
-    const strokes = state.glyphs[char] || [];
+    const strokes = activeGlyphs[char] || [];
     const updated = strokes.filter((_, i) => i !== index);
-    const newGlyphs = { ...state.glyphs, [char]: updated };
-    state.setGlyphs(newGlyphs);
+    const newGlyphs = { ...activeGlyphs, [char]: updated };
+    setActiveGlyphs(newGlyphs);
     updateHistory(char, updated);
   };
 
@@ -128,7 +148,7 @@ function App() {
 
   // Setup font generation
   useFontGenerator(
-    state.glyphs,
+    activeGlyphs,
     state.fontMetadata,
     state.otLoaded,
     state.setFontUrl,
@@ -144,6 +164,17 @@ function App() {
 
   return (
     <div className={`h-screen ${bgPrimary} ${textPrimary} flex flex-col font-sans transition-colors duration-300 overflow-hidden animate-fadeIn`}>
+      <style>{`
+        @font-face {
+          font-family: '90tun';
+          src: url('${process.env.PUBLIC_URL || ''}/assets/90tun.otf') format('opentype');
+          font-weight: normal;
+          font-style: normal;
+        }
+        body.override-font-90tun * {
+          font-family: '90tun', sans-serif !important;
+        }
+      `}</style>
       <Routes>
         <Route path="/" element={
           <IntroModal showIntro={true} setAppMode={setAppMode} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />
@@ -151,16 +182,16 @@ function App() {
         
         <Route path="/digital" element={
           <>
-            <Header darkMode={darkMode} showToolbar={state.showToolbar} setShowToolbar={state.setShowToolbar} downloadFont={() => setShowMetadataModal(true)} otLoaded={state.otLoaded} glyphs={state.glyphs} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} showSettings={state.showSettings} setShowSettings={state.setShowSettings} />
-            <Toolbar showToolbar={state.showToolbar} strokeWidth={state.strokeWidth} setStrokeWidth={state.setStrokeWidth} enableSmoothing={state.enableSmoothing} setEnableSmoothing={state.setEnableSmoothing} enableSimplify={state.enableSimplify} setEnableSimplify={state.setEnableSimplify} undo={undo} redo={redo} currentHistoryIndex={currentHistoryIndex} currentHistory={currentHistory} fontMetadata={state.fontMetadata} setFontMetadata={state.setFontMetadata} exportJSON={exportJSON} downloadFont={() => setShowMetadataModal(true)} otLoaded={state.otLoaded} glyphs={state.glyphs} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textSecondary={textSecondary} textPrimary={textPrimary} clearAllCharacters={clearAllCharacters} copyGlyph={copyGlyph} pasteGlyph={pasteGlyph} clipboard={state.clipboard} leftGuidePos={state.leftGuidePos} setLeftGuidePos={state.setLeftGuidePos} rightGuidePos={state.rightGuidePos} setRightGuidePos={state.setRightGuidePos} transformActions={transformActions} currentCharKey={currentCharKey} charBearings={charBearings} setCharBearings={setCharBearings} />
+            <Header darkMode={darkMode} showToolbar={state.showToolbar} setShowToolbar={state.setShowToolbar} downloadFont={() => setShowMetadataModal(true)} otLoaded={state.otLoaded} glyphs={activeGlyphs} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} showSettings={state.showSettings} setShowSettings={state.setShowSettings} />
+            <Toolbar showToolbar={state.showToolbar} strokeWidth={state.strokeWidth} setStrokeWidth={state.setStrokeWidth} enableSmoothing={state.enableSmoothing} setEnableSmoothing={state.setEnableSmoothing} enableSimplify={state.enableSimplify} setEnableSimplify={state.setEnableSimplify} undo={undo} redo={redo} currentHistoryIndex={currentHistoryIndex} currentHistory={currentHistory} fontMetadata={state.fontMetadata} setFontMetadata={state.setFontMetadata} exportJSON={exportJSON} downloadFont={() => setShowMetadataModal(true)} otLoaded={state.otLoaded} glyphs={activeGlyphs} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textSecondary={textSecondary} textPrimary={textPrimary} copyGlyph={copyGlyph} pasteGlyph={pasteGlyph} clipboard={state.clipboard} leftGuidePos={state.leftGuidePos} setLeftGuidePos={state.setLeftGuidePos} rightGuidePos={state.rightGuidePos} setRightGuidePos={state.setRightGuidePos} transformActions={transformActions} currentCharKey={currentCharKey} charBearings={charBearings} setCharBearings={setCharBearings} />
             <main className={`flex-1 grid grid-cols-[64px_1fr] lg:grid-cols-[280px_1fr_320px] gap-0 overflow-hidden`}>
-              <LeftSidebar activeChar={state.activeChar} setActiveChar={state.setActiveChar} glyphs={state.glyphs} fontUrl={state.fontUrl} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />
-              <Canvas svgRef={svgRef} activeChar={state.activeChar} glyphs={state.glyphs} currentStroke={state.currentStroke} strokeWidth={state.strokeWidth} darkMode={darkMode} handleMouseDown={handleMouseDown} handleMouseMove={handleMouseMove} handleMouseUp={handleMouseUp} deleteStroke={deleteStroke} setSelectedStrokeIndex={setSelectedStrokeIndex} setShowTransform={setShowTransform} clearCurrentChar={clearCurrentChar} bgPrimary={bgPrimary} textSecondary={textSecondary} isUpperCase={state.isUpperCase} setIsUpperCase={state.setIsUpperCase} gridEnabled={state.gridEnabled} gridSize={state.gridSize} snapToGrid={state.snapToGrid} guidesEnabled={state.guidesEnabled} copyGlyph={copyGlyph} pasteGlyph={pasteGlyph} clipboard={state.clipboard} showPreviewModal={state.showPreviewModal} setShowPreviewModal={state.setShowPreviewModal} textPrimary={textPrimary} charRotation={state.charRotation} setCharRotation={state.setCharRotation} currentCharKey={currentCharKey} leftGuidePos={state.leftGuidePos} rightGuidePos={state.rightGuidePos} />
+              <LeftSidebar activeChar={state.activeChar} setActiveChar={state.setActiveChar} glyphs={activeGlyphs} fontUrl={state.fontUrl} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />
+              <Canvas svgRef={svgRef} activeChar={state.activeChar} glyphs={activeGlyphs} currentStroke={state.currentStroke} strokeWidth={state.strokeWidth} darkMode={darkMode} handleMouseDown={handleMouseDown} handleMouseMove={handleMouseMove} handleMouseUp={handleMouseUp} deleteStroke={deleteStroke} setSelectedStrokeIndex={setSelectedStrokeIndex} setShowTransform={setShowTransform} clearCurrentChar={clearCurrentChar} clearAllCharacters={clearAllCharacters} bgPrimary={bgPrimary} textSecondary={textSecondary} isUpperCase={state.isUpperCase} setIsUpperCase={state.setIsUpperCase} gridEnabled={state.gridEnabled} gridSize={state.gridSize} snapToGrid={state.snapToGrid} guidesEnabled={state.guidesEnabled} copyGlyph={copyGlyph} pasteGlyph={pasteGlyph} clipboard={state.clipboard} showPreviewModal={state.showPreviewModal} setShowPreviewModal={state.setShowPreviewModal} textPrimary={textPrimary} charRotation={state.charRotation} setCharRotation={state.setCharRotation} currentCharKey={currentCharKey} leftGuidePos={state.leftGuidePos} rightGuidePos={state.rightGuidePos} />
               <div className="hidden lg:block">
-                <RightSidebar previewText={state.previewText} setPreviewText={state.setPreviewText} fontUrl={state.fontUrl} previewSizes={PREVIEW_SIZES} glyphs={state.glyphs} activeChar={state.activeChar} otLoaded={state.otLoaded} FONT_UNITS={FONT_UNITS} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />
+                <RightSidebar previewText={state.previewText} setPreviewText={state.setPreviewText} fontUrl={state.fontUrl} previewSizes={PREVIEW_SIZES} glyphs={activeGlyphs} activeChar={state.activeChar} otLoaded={state.otLoaded} FONT_UNITS={FONT_UNITS} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />
               </div>
             </main>
-            <MobileBottomBar activeChar={state.activeChar} setActiveChar={state.setActiveChar} otLoaded={state.otLoaded} glyphs={state.glyphs} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} />
+            <MobileBottomBar activeChar={state.activeChar} setActiveChar={state.setActiveChar} otLoaded={state.otLoaded} glyphs={activeGlyphs} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} />
           </>
         } />
 
@@ -175,7 +206,7 @@ function App() {
             textPrimary={textPrimary}
             textSecondary={textSecondary}
             onExtract={(extractedGlyphs) => {
-              state.setGlyphs(prev => {
+              setActiveGlyphs(prev => {
                 const next = { ...prev };
                 for (const char in extractedGlyphs) {
                   next[char] = extractedGlyphs[char];
@@ -188,9 +219,9 @@ function App() {
           />
         } />
         
-        <Route path="/paper" element={<PaperEditor glyphs={state.glyphs} setAppMode={setAppMode} setShowMetadataModal={setShowMetadataModal} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} otLoaded={state.otLoaded} />} />
+        <Route path="/paper" element={<PaperEditor glyphs={activeGlyphs} setAppMode={setAppMode} setShowMetadataModal={setShowMetadataModal} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} otLoaded={state.otLoaded} />} />
         
-        <Route path="/preview" element={<FontTester setAppMode={setAppMode} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} />} />
+        <Route path="/preview" element={<FontTester setAppMode={setAppMode} darkMode={darkMode} bgSecondary={bgSecondary} borderColor={borderColor} textPrimary={textPrimary} textSecondary={textSecondary} initialFontUrl={previewFontUrl} initialFontName={state.fontMetadata?.family} />} />
       </Routes>
 
       <Settings
@@ -221,10 +252,10 @@ function App() {
         showTransform={showTransform}
         setShowTransform={setShowTransform}
         selectedStrokeIndex={selectedStrokeIndex}
-        glyphs={state.glyphs}
+        glyphs={activeGlyphs}
         activeChar={state.activeChar}
         isUpperCase={state.isUpperCase}
-        setGlyphs={state.setGlyphs}
+        setGlyphs={setActiveGlyphs}
         darkMode={darkMode}
         bgSecondary={bgSecondary}
         borderColor={borderColor}
@@ -239,7 +270,7 @@ function App() {
         previewText={state.previewText}
         setPreviewText={state.setPreviewText}
         fontUrl={state.fontUrl}
-        glyphs={state.glyphs}
+        glyphs={activeGlyphs}
         otLoaded={state.otLoaded}
         darkMode={darkMode}
         bgSecondary={bgSecondary}
@@ -254,6 +285,12 @@ function App() {
         metadata={state.fontMetadata}
         setMetadata={state.setFontMetadata}
         onDownload={downloadFont}
+        onPreview={() => {
+          if (state.fontUrl?.url) {
+            setPreviewFontUrl(state.fontUrl.url);
+          }
+          setAppMode('preview');
+        }}
         darkMode={darkMode}
         bgSecondary={bgSecondary}
         borderColor={borderColor}
@@ -261,7 +298,29 @@ function App() {
         textSecondary={textSecondary}
       />
 
-
+      <NewProjectModal
+        show={showNewProject}
+        onClose={() => setShowNewProject(false)}
+        darkMode={darkMode}
+        onStartFresh={() => {
+          state.setGlyphs({});
+          localStorage.removeItem('typeForgeGlyphs');
+          localStorage.removeItem('typeForgeCharHistory');
+          setShowNewProject(false);
+          navigate('/digital');
+        }}
+        onImport={(data) => {
+          state.setGlyphs(data.glyphs || {});
+          localStorage.setItem('typeForgeGlyphs', JSON.stringify(data.glyphs || {}));
+          if (data.fontMetadata) {
+            state.setFontMetadata(data.fontMetadata);
+            localStorage.setItem('typeForgeMetadata', JSON.stringify(data.fontMetadata));
+          }
+          setShowNewProject(false);
+          navigate('/digital');
+          addToast('Design imported successfully', 'success');
+        }}
+      />
 
       <ToastContainer toasts={state.toasts} removeToast={(id) => {
         state.setToasts(prev => prev.filter(toast => toast.id !== id));
@@ -271,4 +330,3 @@ function App() {
 }
 
 export default App;
-

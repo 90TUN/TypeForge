@@ -16,6 +16,7 @@ function Canvas({
   setSelectedStrokeIndex,
   setShowTransform,
   clearCurrentChar,
+  clearAllCharacters,
   bgPrimary,
   textPrimary,
   textSecondary,
@@ -448,13 +449,21 @@ function Canvas({
         {(glyphs[storageKey] || []).length} stroke{(glyphs[storageKey] || []).length !== 1 ? 's' : ''} • {Math.round(CANVAS_SIZE * 0.9)}×{Math.round(CANVAS_SIZE * 0.9)}
       </div>
 
-      {/* Clear Current Character */}
-      <button 
-        onClick={clearCurrentChar}
-        className={`mt-2 px-4 py-2 text-sm font-bold rounded-lg transition ${darkMode ? 'bg-red-900/30 border border-red-700 text-red-400 hover:bg-red-900/50' : 'bg-red-100 border border-red-300 text-red-700 hover:bg-red-200'}`}
-      >
-        Clear Current
-      </button>
+      <div className="flex gap-2 w-full mt-2">
+        <button 
+          onClick={clearCurrentChar}
+          className={`flex-1 px-4 py-2 text-sm font-bold rounded-lg transition ${darkMode ? 'bg-red-900/30 border border-red-700 text-red-400 hover:bg-red-900/50' : 'bg-red-100 border border-red-300 text-red-700 hover:bg-red-200'}`}
+        >
+          Clear Current
+        </button>
+        <button 
+          onClick={clearAllCharacters}
+          className={`flex-1 px-4 py-2 text-sm font-bold rounded-lg transition ${darkMode ? 'bg-red-900/30 border border-red-700 text-red-400 hover:bg-red-900/50' : 'bg-red-100 border border-red-300 text-red-700 hover:bg-red-200'}`}
+          title="Clear all characters (requires confirmation)"
+        >
+          Clear All
+        </button>
+      </div>
     </section>
   );
 }

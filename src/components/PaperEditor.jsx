@@ -1,6 +1,6 @@
 import React from 'react';
 import { ALPHABET, CANVAS_SIZE } from '../utils/constants';
-import { Download, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function PaperEditor({
   glyphs,
@@ -13,102 +13,140 @@ export default function PaperEditor({
   textSecondary,
   otLoaded
 }) {
-  
-  // Calculate how many characters were successfully extracted
   const extractedCount = ALPHABET.filter(char => glyphs[char] && glyphs[char].length > 0).length;
+  const total = ALPHABET.length;
+  const progress = Math.round((extractedCount / total) * 100);
+  const allDone = extractedCount === total;
+
+  const bg      = darkMode ? '#0a0b0f' : '#f5f4f0';
+  const fg      = darkMode ? '#f0efe9' : '#111110';
+  const muted   = darkMode ? '#6b6a62' : '#8a8880';
+  const divider = darkMode ? '#1f1f1c' : '#e2e0da';
+  const cardBg  = darkMode ? '#13161c' : '#ffffff';
 
   return (
-    <div className={`flex flex-col h-full w-full bg-gray-100 ${darkMode ? 'bg-[#0f1115]' : 'bg-gray-100'} overflow-hidden animate-fadeIn`}>
-      
-      {/* HEADER */}
-      <header className={`flex items-center justify-between p-3 sm:p-6 border-b ${borderColor} ${bgSecondary} shrink-0 shadow-sm z-10 gap-2`}>
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          <button 
-            onClick={() => setAppMode('scanner')}
-            className={`p-1.5 sm:p-2 rounded-lg hover:${darkMode ? 'bg-gray-700' : 'bg-gray-200'} transition shrink-0`}
-            title="Back to start"
+    <div
+      className="flex flex-col h-full w-full animate-fadeIn overflow-hidden"
+      style={{ background: bg, color: fg, fontFamily: "'Georgia', 'Times New Roman', serif" }}
+    >
+      {/* ── TOP BAR ── */}
+      <div
+        className="flex items-center justify-between px-6 sm:px-8 py-5 shrink-0 gap-4"
+        style={{ borderBottom: `1px solid ${divider}` }}
+      >
+        <button
+          onClick={() => setAppMode('scanner')}
+          className="flex items-center gap-2 text-sm transition-opacity hover:opacity-60 shrink-0"
+          style={{ fontFamily: 'sans-serif', color: muted }}
+        >
+          <ArrowLeft size={15} /> Back
+        </button>
+
+        {/* Progress */}
+        <div className="flex items-center gap-3 flex-1 max-w-xs">
+          <div
+            className="flex-1 h-1 rounded-full overflow-hidden"
+            style={{ background: divider }}
           >
-            <ArrowLeft className={textSecondary} size={20} />
-          </button>
-          <div className="min-w-0">
-            <h1 className={`text-base sm:text-xl font-bold ${textPrimary} truncate`}>Template Extractor</h1>
-            <p className={`text-xs sm:text-sm ${textSecondary} truncate`}>{extractedCount} / {ALPHABET.length} Characters Extracted</p>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${progress}%`, background: allDone ? '#34d399' : '#4f8ef7' }}
+            />
           </div>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => setShowMetadataModal(true)}
-            disabled={!otLoaded || extractedCount < ALPHABET.length}
-            title={extractedCount < ALPHABET.length ? "Please extract all characters before building" : "Build Font"}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-5 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-base`}
+          <span
+            className="text-xs tabular-nums shrink-0"
+            style={{ fontFamily: 'monospace', color: muted }}
           >
-            <Download size={16} />
-            <span className="hidden sm:inline">Build Font</span>
-            <span className="sm:hidden">Export</span>
-          </button>
+            {extractedCount}/{total}
+          </span>
         </div>
-      </header>
 
-      {/* GRID CONTAINER */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-8 custom-scrollbar">
-        <div className="max-w-7xl mx-auto">
-          
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-4 pb-20">
-            {ALPHABET.map((char) => {
-              const charGlyphs = glyphs[char] || [];
-              const hasGlyph = charGlyphs.length > 0;
-              
-              return (
-                <div 
-                  key={char} 
-                  className={`relative flex flex-col items-center justify-center aspect-square rounded-xl border-2 transition-all ${
-                    hasGlyph 
-                      ? `${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} shadow-sm` 
-                      : `${darkMode ? 'bg-black/20 border-gray-800/50' : 'bg-gray-50/50 border-gray-200/50'}`
-                  }`}
+        <button
+          onClick={() => setShowMetadataModal(true)}
+          disabled={!otLoaded || !allDone}
+          className="flex items-center gap-2 text-sm font-semibold px-5 py-2 rounded-full transition-opacity disabled:opacity-30 shrink-0"
+          style={{
+            fontFamily: 'sans-serif',
+            background: allDone ? '#34d399' : fg,
+            color: allDone ? '#fff' : bg,
+          }}
+          title={!allDone ? `${total - extractedCount} characters still missing` : 'Build font'}
+        >
+          Build font <ArrowRight size={14} />
+        </button>
+      </div>
+
+      {/* ── GRID ── */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
+        <div
+          className="grid pb-10"
+          style={{
+            gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+            gap: 8,
+          }}
+        >
+          {ALPHABET.map((char) => {
+            const charGlyphs = glyphs[char] || [];
+            const has = charGlyphs.length > 0;
+
+            return (
+              <div
+                key={char}
+                className="relative flex flex-col items-center justify-center transition-all duration-200"
+                style={{
+                  aspectRatio: '1',
+                  background: has ? cardBg : 'transparent',
+                  border: `1px solid ${has ? (darkMode ? '#2a2d34' : '#d8d6d0') : divider}`,
+                  borderRadius: 10,
+                }}
+              >
+                {/* char label */}
+                <span
+                  className="absolute top-1.5 left-2 text-[10px]"
+                  style={{ fontFamily: 'monospace', color: has ? muted : muted, opacity: has ? 1 : 0.4 }}
                 >
-                  <span className={`absolute top-1 left-1.5 sm:top-2 sm:left-2 text-[10px] sm:text-xs font-bold ${hasGlyph ? textSecondary : 'text-gray-400 opacity-30'}`}>
+                  {char}
+                </span>
+
+                {has ? (
+                  <svg
+                    viewBox={`0 0 ${CANVAS_SIZE} ${CANVAS_SIZE}`}
+                    className="w-4/5 h-4/5 mt-3"
+                  >
+                    {charGlyphs.map((stroke, index) => {
+                      if (!stroke.points || stroke.points.length === 0) return null;
+                      return stroke.isOutline ? (
+                        <polygon
+                          key={index}
+                          points={stroke.points.map(p => `${p.x},${p.y}`).join(' ')}
+                          fill={darkMode ? '#f0efe9' : '#111110'}
+                        />
+                      ) : (
+                        <polyline
+                          key={index}
+                          points={stroke.points.map(p => `${p.x},${p.y}`).join(' ')}
+                          fill="none"
+                          stroke={darkMode ? '#f0efe9' : '#111110'}
+                          strokeWidth="20"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      );
+                    })}
+                  </svg>
+                ) : (
+                  <span
+                    className="font-bold mt-3"
+                    style={{ fontSize: 28, color: muted, opacity: 0.15 }}
+                  >
                     {char}
                   </span>
-                  
-                  {hasGlyph ? (
-                    <svg viewBox={`0 0 ${CANVAS_SIZE} ${CANVAS_SIZE}`} className="w-4/5 h-4/5 mt-3 sm:mt-4">
-                      {charGlyphs.map((stroke, index) => {
-                        if (!stroke.points || stroke.points.length === 0) return null;
-                        
-                        return stroke.isOutline ? (
-                          <polygon
-                            key={index}
-                            points={stroke.points.map(p => `${p.x},${p.y}`).join(' ')}
-                            fill={darkMode ? 'white' : 'black'}
-                          />
-                        ) : (
-                          <polyline
-                            key={index}
-                            points={stroke.points.map(p => `${p.x},${p.y}`).join(' ')}
-                            fill="none"
-                            stroke={darkMode ? 'white' : 'black'}
-                            strokeWidth="20"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        );
-                      })}
-                    </svg>
-                  ) : (
-                    <span className="text-gray-400 opacity-20 font-bold text-2xl sm:text-4xl mt-3 sm:mt-4">
-                      {char}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PenTool, Download, Settings, X, Wrench, ArrowLeft } from 'lucide-react';
+import { Download, Settings, X, Wrench, ArrowLeft } from 'lucide-react';
 import { ALPHABET } from '../utils/constants';
 
 function Header({
@@ -29,9 +29,6 @@ function Header({
         >
           <ArrowLeft className={textPrimary} size={20} />
         </button>
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 ${darkMode ? 'bg-blue-600' : 'bg-blue-500'} rounded-lg flex items-center justify-center shrink-0 hidden sm:flex`}>
-          <PenTool size={16} className="text-white" />
-        </div>
         <div className="min-w-0">
           <h1 className={`text-lg sm:text-xl font-bold ${textPrimary} truncate`}>TypeForge</h1>
         </div>

@@ -3,7 +3,7 @@ import { THEMES } from '../utils/themes';
 
 export const useTheme = (currentTheme) => {
   return useMemo(() => {
-    const darkMode = currentTheme === 'dark' || currentTheme === 'nord' || currentTheme === 'dracula' || currentTheme === 'gruvbox';
+    const darkMode = ['dark', 'nord', 'dracula', 'gruvbox', 'slate', 'cyberpunk', 'coder'].includes(currentTheme);
     const theme = THEMES[currentTheme];
     
     return {

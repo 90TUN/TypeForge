@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, RotateCw, Wand2, Scissors, FileJson, AlertCircle, Copy, Clipboard, FlipHorizontal, FlipVertical } from 'lucide-react';
+import { RotateCcw, RotateCw, Wand2, Scissors, FileJson, Copy, Clipboard, FlipHorizontal, FlipVertical } from 'lucide-react';
 
 export default function Toolbar({
   showToolbar,
@@ -16,7 +16,6 @@ export default function Toolbar({
   fontMetadata,
   setFontMetadata,
   exportJSON,
-  clearAllCharacters,
   darkMode,
   bgSecondary,
   borderColor,
@@ -37,10 +36,8 @@ export default function Toolbar({
   const buttonBase = `h-8 rounded-md transition-all duration-200 flex items-center justify-center gap-1 hover:scale-105 active:scale-95`;
   const buttonPrimary = `${buttonBase} px-2 text-sm font-medium ${darkMode ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/50' : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-blue-500/30'}`;
   const buttonSecondary = `${buttonBase} px-2 text-sm font-medium ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 hover:shadow-lg hover:shadow-gray-600/50' : 'bg-gray-200 hover:bg-gray-300 text-gray-800 hover:shadow-lg hover:shadow-gray-300/50'}`;
-  const buttonDanger = `${buttonBase} px-2 text-sm font-medium ${darkMode ? 'bg-red-700 hover:bg-red-600 text-white shadow-lg hover:shadow-red-500/50' : 'bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-red-500/30'}`;
 
   return (
-
     <div className={`border-b ${borderColor} ${bgSecondary} px-2 sm:px-6 py-2 overflow-x-auto custom-scrollbar transition-colors shrink-0`}>
       <div className="flex flex-nowrap sm:flex-wrap gap-2 sm:gap-4 items-center w-max sm:w-auto">
         
@@ -61,8 +58,6 @@ export default function Toolbar({
             </div>
           </div>
         </div>
-
-
 
         {/* EFFECTS */}
         <div className={`flex gap-2 shrink-0`}>
@@ -163,18 +158,6 @@ export default function Toolbar({
           >
             <FileJson size={16} />
             <span className="hidden sm:inline text-xs">JSON</span>
-          </button>
-        </div>
-
-        {/* DANGER ZONE */}
-        <div className={`flex gap-1.5 ml-auto shrink-0`}>
-          <button
-            onClick={clearAllCharacters}
-            className={`${buttonDanger}`}
-            title="Clear all characters (requires confirmation)"
-          >
-            <AlertCircle size={16} />
-            <span className="hidden sm:inline text-xs">Clear All</span>
           </button>
         </div>
       </div>

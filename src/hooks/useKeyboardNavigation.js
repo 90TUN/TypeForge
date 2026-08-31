@@ -10,9 +10,14 @@ export const useKeyboardNavigation = (
 ) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Ignore key events if the user is typing in an input or textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
       const charIndex = ALPHABET.indexOf(activeChar);
       
-      if (e.key.match(/^[A-Za-z0-9!@#$%^&*()\\-_=+\\[\\]{}|;:'",.<?\/~`]$/)) {
+      if (e.key && typeof e.key === 'string' && e.key.length === 1) {
         const char = e.key.toUpperCase();
         if (ALPHABET.includes(char)) {
           e.preventDefault();

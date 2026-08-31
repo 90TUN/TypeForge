@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Upload, Type } from 'lucide-react';
+import { ArrowLeft, Upload } from 'lucide-react';
 
 export default function FontTester({
   setAppMode,
@@ -7,122 +7,193 @@ export default function FontTester({
   bgSecondary,
   borderColor,
   textPrimary,
-  textSecondary
+  textSecondary,
+  initialFontUrl,
+  initialFontName,
 }) {
   const [fontLoaded, setFontLoaded] = useState(false);
   const [fontName, setFontName] = useState('');
-  const [testText, setTestText] = useState('The quick brown fox jumps over the lazy dog.\n\n1234567890\n\n!@#$%^&*()_+');
+  const [testText, setTestText] = useState('');
   const [fontSize, setFontSize] = useState(48);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+  const bg      = darkMode ? '#0a0b0f' : '#f5f4f0';
+  const fg      = darkMode ? '#f0efe9' : '#111110';
+  const muted   = darkMode ? '#6b6a62' : '#8a8880';
+  const divider = darkMode ? '#1f1f1c' : '#e2e0da';
+  const areaBg  = darkMode ? '#13161c' : '#ffffff';
+
+  // Auto-load a font from a blob URL (passed in after "bake & download")
+  useEffect(() => {
+    if (!initialFontUrl) return;
+    const load = async () => {
       try {
-        const buffer = await file.arrayBuffer();
-        const font = new FontFace('CustomTestFont', buffer);
+        // Remove any previous CustomTestFont
+        document.fonts.forEach(f => { if (f.family === 'CustomTestFont') document.fonts.delete(f); });
+        const font = new FontFace('CustomTestFont', `url(${initialFontUrl})`);
         await font.load();
         document.fonts.add(font);
         setFontLoaded(true);
-        setFontName(file.name);
+        setFontName(initialFontName || 'Your font');
       } catch (err) {
-        console.error('Failed to load font:', err);
-        alert('Failed to parse this font file. Make sure it is a valid .otf or .ttf file.');
+        console.error('Failed to load generated font:', err);
       }
+    };
+    load();
+  }, [initialFontUrl, initialFontName]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      document.fonts.forEach(f => { if (f.family === 'CustomTestFont') document.fonts.delete(f); });
+      const buffer = await file.arrayBuffer();
+      const font = new FontFace('CustomTestFont', buffer);
+      await font.load();
+      document.fonts.add(font);
+      setFontLoaded(true);
+      setFontName(file.name);
+    } catch (err) {
+      console.error('Failed to load font:', err);
+      alert('Failed to parse this font file. Make sure it is a valid .otf or .ttf file.');
     }
   };
 
   useEffect(() => {
-    // Cleanup is tricky with FontFace, but we can just clear it on unmount
     return () => {
-      document.fonts.forEach(f => {
-        if (f.family === 'CustomTestFont') document.fonts.delete(f);
-      });
+      document.fonts.forEach(f => { if (f.family === 'CustomTestFont') document.fonts.delete(f); });
     };
   }, []);
 
   return (
-    <div className={`flex flex-col h-full w-full ${darkMode ? 'bg-[#0f1115]' : 'bg-gray-100'} animate-fadeIn overflow-y-auto`}>
-      {/* Header */}
-      <header className={`sticky top-0 flex items-center p-3 sm:p-4 border-b ${borderColor} ${bgSecondary} shrink-0 shadow-sm z-20`}>
-        <button 
+    <div
+      className="flex flex-col h-full w-full animate-fadeIn overflow-hidden"
+      style={{ background: bg, color: fg, fontFamily: "'Georgia', 'Times New Roman', serif" }}
+    >
+      {/* ── TOP BAR ── */}
+      <div
+        className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 shrink-0"
+        style={{ borderBottom: `1px solid ${divider}` }}
+      >
+        <button
           onClick={() => setAppMode('intro')}
-          className={`p-2 rounded-lg hover:${darkMode ? 'bg-gray-700' : 'bg-gray-200'} transition shrink-0 mr-4`}
-          title="Back to Setup"
+          className="flex items-center transition-opacity hover:opacity-60 shrink-0"
+          style={{ color: muted }}
         >
-          <ArrowLeft className={textPrimary} size={20} />
+          <ArrowLeft size={18} />
         </button>
-        <div>
-          <h1 className={`text-lg sm:text-xl font-bold ${textPrimary}`}>Font Tester</h1>
-          <p className={`text-xs ${textSecondary}`}>Upload any font file to preview it</p>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 overflow-hidden">
+        <span
+          className="text-xs uppercase tracking-widest"
+          style={{ fontFamily: 'sans-serif', color: muted }}
+        >
+          {fontLoaded ? fontName : 'Font tester'}
+        </span>
+
+        {fontLoaded ? (
+          <label
+            className="text-xs cursor-pointer transition-opacity hover:opacity-60 shrink-0"
+            style={{ fontFamily: 'sans-serif', color: muted }}
+          >
+            Change font
+            <input type="file" accept=".otf,.ttf,.woff,.woff2" onChange={handleFileUpload} className="hidden" />
+          </label>
+        ) : (
+          <div className="w-20" />
+        )}
+      </div>
+
+      {/* ── BODY ── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {!fontLoaded ? (
-          <div className={`max-w-md w-full ${bgSecondary} border ${borderColor} rounded-2xl p-8 shadow-xl text-center flex flex-col items-center`}>
-            <div className={`w-16 h-16 mb-6 rounded-2xl flex items-center justify-center ${darkMode ? 'bg-green-900/40 text-green-400' : 'bg-green-100 text-green-600'}`}>
-              <Upload size={32} />
-            </div>
-            <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>Upload a Font</h2>
-            <p className={`${textSecondary} text-sm mb-8`}>Select any .otf, .ttf, .woff, or .woff2 file from your device to test it instantly.</p>
-            
-            <label className={`w-full py-4 border-2 border-dashed ${darkMode ? 'border-gray-600 hover:border-green-500 hover:bg-gray-800' : 'border-gray-300 hover:border-green-500 hover:bg-green-50'} rounded-xl cursor-pointer transition-colors flex flex-col items-center justify-center group`}>
-              <span className={`font-bold ${textPrimary} group-hover:text-green-500 transition-colors`}>Browse Files</span>
+          /* ── Upload prompt ── */
+          <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8">
+            <label
+              className="flex flex-col items-center justify-center w-full max-w-lg cursor-pointer"
+              style={{
+                border: `2px dashed ${divider}`,
+                borderRadius: 16,
+                padding: '3rem 2rem',
+                transition: 'border-color 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#34d399'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = divider}
+            >
+              <Upload size={32} style={{ color: muted, marginBottom: 16 }} />
+              <span className="text-lg font-bold mb-1 text-center" style={{ letterSpacing: '-0.02em' }}>
+                Upload a font file
+              </span>
+              <span className="text-sm text-center" style={{ fontFamily: 'sans-serif', color: muted }}>
+                .otf · .ttf · .woff · .woff2
+              </span>
               <input type="file" accept=".otf,.ttf,.woff,.woff2" onChange={handleFileUpload} className="hidden" />
             </label>
           </div>
         ) : (
-          <div className="w-full h-full flex flex-col max-w-5xl mx-auto gap-4">
-            <div className={`flex items-center justify-between p-4 ${bgSecondary} border ${borderColor} rounded-xl shadow-sm shrink-0 flex-wrap gap-4`}>
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${darkMode ? 'bg-gray-800 text-green-400' : 'bg-green-100 text-green-600'} shrink-0`}>
-                  <Type size={20} />
-                </div>
-                <div className="min-w-0">
-                  <p className={`text-xs ${textSecondary} uppercase font-bold tracking-wider mb-0.5`}>Current Font</p>
-                  <p className={`font-bold ${textPrimary} truncate`}>{fontName}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className={`text-xs font-bold ${textSecondary} uppercase`}>Size</label>
-                  <input 
-                    type="range" 
-                    min="12" 
-                    max="144" 
-                    value={fontSize} 
-                    onChange={e => setFontSize(e.target.value)}
-                    className="w-24 sm:w-32 accent-green-500"
-                  />
-                  <span className={`text-sm ${textPrimary} w-8 text-right`}>{fontSize}</span>
-                </div>
-                
-                <button 
-                  onClick={() => { setFontLoaded(false); setFontName(''); }}
-                  className={`px-4 py-2 text-sm font-bold rounded-lg border ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-200'} transition-colors`}
-                >
-                  Change
-                </button>
-              </div>
+          /* ── Preview area ── */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Size control */}
+            <div
+              className="flex items-center gap-4 px-6 sm:px-8 py-3 shrink-0"
+              style={{ borderBottom: `1px solid ${divider}` }}
+            >
+              <span className="text-xs uppercase tracking-widest" style={{ fontFamily: 'sans-serif', color: muted }}>
+                Size
+              </span>
+              <input
+                type="range"
+                min="12"
+                max="144"
+                value={fontSize}
+                onChange={e => setFontSize(e.target.value)}
+                className="flex-1 accent-emerald-500"
+              />
+              <span
+                className="text-sm tabular-nums w-10 text-right"
+                style={{ fontFamily: 'monospace', color: muted }}
+              >
+                {fontSize}px
+              </span>
             </div>
 
-            <div className={`flex-1 min-h-[300px] flex flex-col relative`}>
-              <label className={`text-xs font-bold ${textSecondary} uppercase tracking-wider mb-2 ml-1`}>Type to preview:</label>
-              <textarea
-                value={testText}
-                onChange={(e) => setTestText(e.target.value)}
-                style={{ fontFamily: 'CustomTestFont', fontSize: `${fontSize}px` }}
-                className={`w-full flex-1 p-4 sm:p-6 rounded-xl border-2 ${darkMode ? 'bg-gray-800 border-gray-700 focus:border-blue-500' : 'bg-white border-gray-300 focus:border-blue-500'} resize-none focus:outline-none ${textPrimary} shadow-sm transition-colors`}
-                placeholder="Start typing here to test your font..."
-                spellCheck="false"
-              />
-            </div>
+          <div className="flex-1 relative overflow-hidden">
+            {/* Placeholder overlay — shown when textarea is empty, rendered in the custom font */}
+            {testText === '' && (
+              <div
+                className="absolute inset-0 pointer-events-none select-none flex items-start"
+                style={{
+                  fontFamily: 'CustomTestFont',
+                  fontSize: `${fontSize}px`,
+                  lineHeight: 1.4,
+                  padding: '2rem',
+                  color: muted,
+                  opacity: 0.4,
+                }}
+              >
+                Type here to preview font…
+              </div>
+            )}
+            <textarea
+              value={testText}
+              onChange={e => setTestText(e.target.value)}
+              style={{
+                fontFamily: 'CustomTestFont',
+                fontSize: `${fontSize}px`,
+                width: '100%',
+                height: '100%',
+                resize: 'none',
+                padding: '2rem',
+                background: areaBg,
+                color: fg,
+                border: 'none',
+                outline: 'none',
+                lineHeight: 1.4,
+              }}
+              spellCheck={false}
+            />
+          </div>
           </div>
         )}
       </div>
     </div>
   );
 }
-
